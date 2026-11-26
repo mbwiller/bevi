@@ -2,6 +2,7 @@ import type { BevSummary, Comment, Profile } from '@bevi/shared';
 import { fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import { DOUBLE_TAP_MS, FeedPost, POST_AVATAR, POST_PICTURE } from '../FeedPost';
+import { followPill } from '@/testing/followPill';
 
 const BEV: BevSummary = {
   id: 'b2',
@@ -11,6 +12,7 @@ const BEV: BevSummary = {
   categoryId: 'other',
   photoUrl: null,
   iconUrl: null,
+  iconLabelBand: null,
   photoStatus: 'ready',
   priceTier: 2,
   priceEstimated: false,
@@ -598,7 +600,7 @@ describe('the plain post and the Follow pill (Explore)', () => {
   it("onFollow draws the author's Follow pill first on the left; following turns it to Following", async () => {
     const onFollow = jest.fn();
     const { rerender } = await render(<FeedPost actor={ARJUN} bev={BEV} score={9.5} onFollow={onFollow} />);
-    const pill = within(screen.getByTestId('post-social')).getByRole('button', { name: 'Follow Arjun Cheema' });
+    const pill = within(screen.getByTestId('post-social')).getByRole('button', { name: followPill('Arjun Cheema') });
     expect(pill.props['aria-pressed']).toBe(false);
     expect(within(pill).getByText('Follow')).toBeTruthy();
     // A leading pill has no side padding, so the group isn't pulled back past the gutter.
@@ -607,7 +609,7 @@ describe('the plain post and the Follow pill (Explore)', () => {
     expect(onFollow).toHaveBeenCalledTimes(1);
 
     await rerender(<FeedPost actor={ARJUN} bev={BEV} score={9.5} following onFollow={onFollow} />);
-    const following = screen.getByRole('button', { name: 'Follow Arjun Cheema' });
+    const following = screen.getByRole('button', { name: followPill('Arjun Cheema') });
     expect(following.props['aria-pressed']).toBe(true);
     expect(within(following).getByText('Following')).toBeTruthy();
   });
@@ -615,5 +617,29 @@ describe('the plain post and the Follow pill (Explore)', () => {
   it('with the heart first, the left group pulls its padding back to the gutter', async () => {
     await render(<FeedPost actor={ARJUN} bev={BEV} score={9.5} onLike={() => {}} />);
     expect(flat(screen.getByTestId('post-social').props.style).marginLeft).toBe(-8);
+  });
+});
+
+describe('the place line (BEV-22)', () => {
+  it('shows where the Bev was had under the meta line, as text when there is nowhere to go', async () => {
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={8.2} time={FIVE_HOURS_AGO()} place="Duane Reade" />);
+    const line = screen.getByTestId('post-place');
+    expect(within(line).getByText('Duane Reade')).toBeTruthy();
+    expect(line.props.accessibilityLabel).toBe('At Duane Reade');
+    expect(screen.queryByRole('button', { name: /Show on the map/ })).toBeNull();
+  });
+
+  it('opens the place when it can, with a 44pt target around the line', async () => {
+    const onPlace = jest.fn();
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={8.2} place="Duane Reade" onPlace={onPlace} />);
+    const line = screen.getByRole('button', { name: 'At Duane Reade. Show on the map' });
+    expect(within(line).getByTestId('hit-target')).toBeTruthy();
+    await fireEvent.press(line);
+    expect(onPlace).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws nothing with no place', async () => {
+    await render(<FeedPost actor={ARJUN} bev={BEV} score={8.2} place={null} onPlace={jest.fn()} />);
+    expect(screen.queryByTestId('post-place')).toBeNull();
   });
 });

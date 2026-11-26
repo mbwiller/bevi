@@ -4,18 +4,23 @@
 // Each method lists the `ApiError.code` values (./errors) it can throw beyond
 // `network` / `unknown`, which any method can throw. Every method other than
 // `signUp`, `signIn`, `getSession`, `onAuthChange`, `profile.checkHandle` and
-// `meta.getAppConfig` and read-only `nutrition.lookupBarcode` throw 'unauthorized' when signed out.
+// `meta.getAppConfig` and the read-only `nutrition` lookups throw 'unauthorized' when signed out.
 
-import type { Bucket, CategoryId, PriceTier } from './enums';
+import type { Bucket, CategoryId, PriceTier, ReportContentKind, ReportReason } from './enums';
 import type {
-  NutritionPreview,
   AppConfig,
+  BarcodeProduct,
   Bev,
+  BevdAtVenue,
+  BevdPin,
+  BevdScope,
   BevIcon,
   BevLeaf,
+  BevLocationSummary,
   BevOfPeriod,
   BevSimilarity,
   BevSummary,
+  BlockedUser,
   BucketBev,
   Category,
   CategoryNode,
@@ -23,11 +28,17 @@ import type {
   Comment,
   Comparison,
   ExplorePost,
+  ExternalPlace,
   FeaturedBev,
   FeedItem,
+  LatLng,
   LatLngBounds,
   LeaderboardRow,
+  Notification,
+  NotificationSettings,
+  NutritionPreview,
   Page,
+  PostNotificationPerson,
   Profile,
   ProfileRow,
   ProfileStats,
@@ -38,8 +49,10 @@ import type {
   SuggestedProfile,
   TasteProfileRow,
   UserLeaderboardRow,
+  Venue,
   VenueDetail,
   VenueFilters,
+  VenueMatch,
   VenuePin,
   WantToTryItem,
 } from './types';
@@ -149,6 +162,24 @@ export interface ProfileApi {
 
   /** Matches display name or handle. @throws 'unauthorized'. */
   searchUsers(params: { q: string; limit?: number; cursor?: string }): Promise<Page<ProfileRow>>;
+
+  /**
+   * The caller's go-to categories from onboarding, favourite first; `[]` until set. Only ever
+   * the caller's own: nobody else can read them (a pick of an alcoholic category would say the
+   * person is 21+).
+   * @throws 'unauthorized'.
+   */
+  getCategoryPicks(): Promise<CategoryId[]>;
+
+  /**
+   * Replaces the caller's go-to categories with `categoryIds`, favourite first, and returns what
+   * was saved (same order). 0 to `MAX_CATEGORY_PICKS` top-level categories, no repeats; `[]`
+   * clears them. Nothing is saved when it throws.
+   * @throws 'unauthorized'; 'validation' (`detail.field: 'categoryIds'`) — too many, a repeat,
+   *   or an id that is not a top-level category; 'age_restricted' — an alcoholic category when
+   *   the caller cannot see alcohol (`canSeeAlcohol` false).
+   */
+  setCategoryPicks(categoryIds: CategoryId[]): Promise<CategoryId[]>;
 }
 
 export interface StatsApi {
@@ -228,19 +259,9 @@ export interface CreateBevInput {
   priceTier: PriceTier | null;
   priceEstimated: boolean;
   /**
-   * From `media.upload({ kind: 'bev-photo' })`. **Optional**, and the one input
-   * that decides whether an AI icon is generated for this Bev.
-   *
-   * With a photo: the Bev is created `active` and the backend schedules exactly
-   * one icon-generation job, so `bevs.icons([id])` reports `'pending'` and the
-   * illustration appears within a minute or two.
-   *
-   * Without one: the Bev is still created and is immediately usable, but it is
-   * `'pending_photo'` and therefore **visible to its creator alone** until a
-   * photo exists, its `iconStatus` is `'none'` for good, and no generation
-   * request is ever made. Nothing the caller can do afterwards -- adding a
-   * photo by an edit, posting a photo with a ranking -- makes it eligible; only
-   * creation is.
+   * Optional verified creation photo. With a photo the Bev is active and eligible
+   * for automatic icon generation. Without one it is pending_photo, creator-only,
+   * and ineligible. Later edits/ranking photos do not establish eligibility.
    */
   photoAssetId?: string;
   /** From `media.upload({ kind: 'label' })`. */
@@ -382,6 +403,7 @@ export interface BevsApi {
    * @throws 'unauthorized', 'validation' (`detail.field = 'bevIds'`, over 500).
    */
   icons(bevIds: readonly string[]): Promise<BevIcon[]>;
+
 }
 
 /**
@@ -433,6 +455,16 @@ export interface SubmitRankingInput {
   comparisons: Comparison[];
   /** Up to 140 chars. */
   note?: string;
+  /**
+   * Where the Bev was had (contract 3.5.0): a `Venue` id from `venues.search`
+   * or `venues.addPlace`. Saved with the ranking in one write, so a failure
+   * here fails the whole submit.
+   *
+   * Left out, `submitRanking` saves no place and `rerankBev` KEEPS the one the
+   * Bev already has. `null` on `rerankBev` removes it; on `submitRanking` it
+   * is the same as leaving it out.
+   */
+  venueId?: string | null;
 }
 
 export interface SubmitRankingResult {
@@ -482,7 +514,8 @@ export interface RankingsApi {
   /**
    * Inserts a new ranking at `insertIndex`, re-spaces the bucket's scores, stores
    * the comparisons, and posts a feed item, atomically. Removes the Bev from Want
-   * to Try.
+   * to Try. No feed item while the caller's `onboarded` is false: the starter
+   * rankings stay in their list, stats and streak, but are never posts.
    * @throws 'unauthorized'; 'not_found' — no such Bev; 'age_restricted';
    *   'conflict' — the server's bucket size ≠ `expectedBucketSize`, or the Bev is
    *   already ranked (use `rerankBev`); 'validation' — `insertIndex` outside
@@ -503,8 +536,30 @@ export interface RankingsApi {
   /** @throws 'unauthorized', 'not_found' — not ranked; 'validation' — too long. */
   updateNote(bevId: string, note: string): Promise<void>;
 
-  /** Other scores in that bucket shift. @throws 'unauthorized', 'not_found'. */
+  /**
+   * Other scores in that bucket shift, and the Bev's place (`setVenue`) goes
+   * with it. @throws 'unauthorized', 'not_found'.
+   */
   removeRanking(bevId: string): Promise<void>;
+
+  /**
+   * Sets, replaces or (`null`) removes where the caller had a Bev they have
+   * already ranked (contract 3.5.0). Returns the venue, or null when removed.
+   * No feed post is written: the posts about that Bev simply show the place.
+   * @throws 'unauthorized'; 'not_found' — the caller has not ranked this Bev,
+   *   or there is no such venue.
+   */
+  setVenue(bevId: string, venueId: string | null): Promise<Venue | null>;
+
+  /**
+   * Where the caller had one Bev, or null: they did not say, or have not
+   * ranked it. For the re-rank flow, which shows the place it will keep.
+   * @throws 'unauthorized'.
+   */
+  getVenue(bevId: string): Promise<Venue | null>;
+
+  /** How many of the caller's rankings have a place. @throws 'unauthorized'. */
+  locationSummary(): Promise<BevLocationSummary>;
 }
 
 export interface WantToTryApi {
@@ -583,6 +638,18 @@ export interface FeedApi {
 
   /** Idempotent. @throws 'unauthorized', 'not_found', 'rate_limited'. */
   unlike(id: string): Promise<void>;
+
+  /**
+   * One post, in the same shape as `getFeed` (likes, the first seven comments
+   * inline, `alsoBevdBy`, the venue): what a notification opens
+   * (`Notification.postId`). Only a post the caller may see, by the feed's
+   * rule: their own or a followed user's, no block between them and its
+   * author, and an alcoholic Bev only from 21 (contract 3.7.0).
+   * @throws 'unauthorized'; 'not_found' — no such post (a removed or
+   *   re-ranked ranking takes its post with it), or one the caller cannot
+   *   see, which reads exactly the same.
+   */
+  getPost(id: string): Promise<FeedItem>;
 }
 
 export interface CommentsApi {
@@ -671,10 +738,75 @@ export interface VenuesApi {
    * options. @throws 'unauthorized'.
    */
   neighborhoods(): Promise<string[]>;
+
+  /**
+   * The place picker (contract 3.5.0). Every venue Bevi has is searchable,
+   * with or without an assortment, so this is wider than `inView`.
+   *
+   * With an empty `query` it answers "what is near me": the venues nearest
+   * `near`, and an empty list when there is no `near` either. With a query it
+   * matches names (accents and case folded; also the address and the
+   * neighbourhood for a second word, as in "starbucks main"), best match
+   * first and, within equally good matches, the nearest first.
+   *
+   * `near` is used to order this one answer and is not stored. `limit` is 20
+   * by default and at most 50.
+   * @throws 'unauthorized'; 'validation' — a query over 80 characters, or a
+   *   position that is not on the Earth.
+   */
+  search(params: { query: string; near?: LatLng | null; limit?: number }): Promise<VenueMatch[]>;
+
+  /**
+   * Places Bevi does not have, from an outside directory: the fallback when
+   * `search` misses, and the way a place outside New York gets in. Results
+   * are not venues until one is passed to `addPlace`.
+   * @throws 'unauthorized'; 'validation' — an empty query, or over 80
+   *   characters; 'rate_limited'; 'unknown' — the directory is not configured
+   *   or did not answer.
+   */
+  searchMore(params: { query: string; near?: LatLng | null }): Promise<ExternalPlace[]>;
+
+  /**
+   * Makes a venue of an `ExternalPlace` and returns it; a place Bevi already
+   * has under that id, or under the same name at the same spot, comes back as
+   * the existing venue.
+   * @throws 'unauthorized'; 'not_found' — no such place; 'rate_limited';
+   *   'unknown' — as `searchMore`.
+   */
+  addPlace(placeId: string): Promise<Venue>;
+
+  /**
+   * The venues the caller set on a Bev most recently, newest first, each once:
+   * the picker's "Recent" rows. Ordered by when the place was set, not by when
+   * the Bev was ranked, so tagging an old Bev brings its place to the top.
+   * `limit` is 5 by default and at most 20.
+   * @throws 'unauthorized'.
+   */
+  recent(params?: { limit?: number }): Promise<Venue[]>;
+
+  /**
+   * The map of where Bevs were had: one pin per venue where someone in
+   * `scope` (default 'all') had a Bev the caller may see. Not a viewport
+   * query: the whole answer comes back, most recent first, capped at 1000.
+   * @throws 'unauthorized'.
+   */
+  bevdMap(params?: { scope?: BevdScope }): Promise<BevdPin[]>;
+
+  /**
+   * What was had at one venue, by the people in `scope` (default 'all'), the
+   * most recent first. 'not_found' for an unknown or hidden venue, and for
+   * one where nothing in scope is visible to the caller: there was no pin.
+   * @throws 'unauthorized', 'not_found'.
+   */
+  bevdAt(venueId: string, params?: { scope?: BevdScope }): Promise<BevdAtVenue>;
 }
 
 export interface MetaApi {
-  /** Callable signed out. */
+  /**
+   * The version gate and the maintenance flag (`AppConfig`). Callable signed
+   * out: a client has to be able to read the gate before it can sign in.
+   * Only a successful read may block the app; on any error, leave it open.
+   */
   getAppConfig(): Promise<AppConfig>;
 }
 
@@ -685,9 +817,10 @@ export interface MetaApi {
 // nothing here edits it after create beyond the two writes below, and the app
 // never holds a tracker credential. Both writes are to the caller's own
 // tickets: `markVerified`, which moves a ticket the reporter has checked on
-// the device to Done, and `place`, which puts a ticket in the reporter's
-// ranked list (the board's shared order, and the priority that position
-// implies).
+// the device to Done (only once it is in review), and `place`, which puts a
+// ticket in the reporter's ranked list (the board's shared order, and the
+// priority that position implies). Ranking is a founder's act: an internal
+// reporter who is a tester files and confirms but does not rank (`canRank`).
 // ---------------------------------------------------------------------------
 
 /** What the reporter says it is. The server files each kind as the ticket's type on the board. */
@@ -824,12 +957,12 @@ export interface BugReportInput {
    * call and never before it — nothing leaves the device until the reporter
    * submits. `caption` says what one shows, e.g. 'Feed, with 1 marked'.
    *
-   * Deliberately still `Blob`, not `UploadPayload`: the bug reporter is a
-   * web-only surface until it is ported to native (IM-10). Widening it is
-   * that port's job — it needs a contract decision of its own, and the
-   * implementation must normalise the bytes the way `media.upload` does.
+   * `file` is an `UploadPayload` (contract 3.3.0; it was `Blob` alone before),
+   * the same union `media.upload` takes: a `Blob` on the web, bytes
+   * (`Uint8Array` or `ArrayBuffer`) on React Native, where a `Blob` is
+   * refused with `'validation'` rather than stored as an empty file.
    */
-  evidence?: { file: Blob; mimeType: string; caption?: string }[];
+  evidence?: { file: UploadPayload; mimeType: string; caption?: string }[];
   /**
    * A UUID the client generates once per draft and reuses on every retry of
    * that draft. The same key never creates a second ticket.
@@ -874,7 +1007,8 @@ export interface BugReportSummary {
    * and in progress), 1 being the one that bothers them most. It is the
    * board's shared order read back, so it follows a drag on the board too. Null for a
    * ticket that is in review, closed or unknown, and when the tracker could
-   * not be asked.
+   * not be asked. Null on every ticket for an account that may not rank
+   * (`canRank()` is false): the board's shared order is not theirs to see.
    */
   rank: number | null;
 }
@@ -887,6 +1021,16 @@ export interface BugsApi {
    * ordinary user — it answers false.
    */
   canReport(): Promise<boolean>;
+
+  /**
+   * Whether this account may rank its tickets against each other: a
+   * founder's act, since it sets the ticket's priority and its place in the
+   * board's one shared order. Drives whether Place is shown; it is not the
+   * access check, which runs server-side on every `place`. Never throws
+   * 'unauthorized' for a signed-in account that may not rank — it answers
+   * false.
+   */
+  canRank(): Promise<boolean>;
 
   /**
    * Files one report: uploads the evidence (if any), then creates the tracker
@@ -918,9 +1062,15 @@ export interface BugsApi {
    * workflow reserves for a human). Returns the ticket as the tracker now
    * reports it.
    *
+   * Only a ticket that is in review can be verified, for every caller: before
+   * then there is no fix to have checked.
+   *
    * @throws 'unauthorized' — signed out, or not an internal reporter;
-   *   'not_found' — not one of the caller's tickets; 'validation' — not a
-   *   ticket identifier; 'unknown' — the tracker refused or is unconfigured.
+   *   'not_found' — not one of the caller's tickets; 'conflict' — one of the
+   *   caller's tickets, but not in review (`detail.reason = 'not_in_review'`):
+   *   refetch the list; 'validation' —
+   *   not a ticket identifier; 'unknown' — the tracker refused, could not be
+   *   asked, or is unconfigured.
    */
   markVerified(ticketId: string): Promise<BugReportSummary>;
 
@@ -933,7 +1083,8 @@ export interface BugsApi {
    * Urgent stays Urgent). Returns the caller's tickets as `listMine` does,
    * with the new ranks.
    *
-   * @throws 'unauthorized' — signed out, or not an internal reporter;
+   * @throws 'unauthorized' — signed out, not an internal reporter, or an
+   *   internal reporter who may not rank (`canRank()` is false);
    *   'not_found' — either ticket is not one of the caller's;
    *   'conflict' — one of them is the caller's but is no longer open
    *   (`detail.reason = 'not_open'`): refetch the list;
@@ -944,9 +1095,227 @@ export interface BugsApi {
   place(ticketId: string, afterTicketId: string | null): Promise<BugReportSummary[]>;
 }
 
+export interface BlocksApi {
+  /**
+   * The caller blocks this person (IS-7, App Store Guideline 1.2). The intent
+   * is one-directional -- they are never told, and their own block list does
+   * not change -- but the effect is mutual: from then on neither sees the
+   * other's profile, posts, comments, rankings or follow edges, and each gets
+   * 'not_found' for the other (`profile.getUser`, `feed.listUser`,
+   * `follows.follow`, ...). Blocking also removes the follow edges between the
+   * two, both ways; unblocking does not restore them.
+   *
+   * Idempotent: blocking someone already blocked resolves without error.
+   * @throws 'unauthorized'; 'not_found' — no such user; 'validation' —
+   *   blocking yourself; 'rate_limited'.
+   */
+  block(userId: string): Promise<void>;
+
+  /**
+   * Lifts the caller's own block. Idempotent: unblocking someone who was never
+   * blocked resolves without error. A block someone else made against the
+   * caller can neither be lifted nor detected from here.
+   * @throws 'unauthorized'.
+   */
+  unblock(userId: string): Promise<void>;
+
+  /**
+   * The people the caller has blocked, most recently blocked first: the
+   * Blocked accounts screen. Only the caller's own blocks: there is
+   * deliberately no way to ask who has blocked the caller, or whether a given
+   * person has.
+   * @throws 'unauthorized'.
+   */
+  list(page?: PageParams): Promise<Page<BlockedUser>>;
+}
+
+export interface ReportContentInput {
+  kind: ReportContentKind;
+  /** `FeedItem.id` / `ExplorePost.id` for 'post', `Comment.id` for 'comment', `Profile.id` for 'profile'. */
+  id: string;
+  reason: ReportReason;
+  /** The reporter's own words, at most `REPORT_NOTE_MAX` characters after trimming. Blank means none. */
+  note?: string;
+}
+
+export interface ReportContentResult {
+  /** The report's id: the existing one when the caller had already reported this content. */
+  reportId: string;
+}
+
+export interface ReportsApi {
+  /**
+   * Files a report about one post, comment or person for the operators to
+   * review (IS-7, App Store Guideline 1.2). It does not hide, block or notify
+   * anything; offer `blocks.block` beside it for that.
+   *
+   * Idempotent per (caller, content): reporting the same thing again returns
+   * the first report's id and changes nothing, whatever the new reason or note.
+   *
+   * Anything the caller can be shown is reportable: a post from the feed, a
+   * profile or Explore (`ExplorePost.id`), a comment from a thread, a profile.
+   * Content by someone the caller has blocked stays reportable, so Block then
+   * Report works. A comment on an Explore post is not, since Explore never
+   * shows comments (D-15).
+   * @throws 'unauthorized'; 'not_found' — no such content, or content the
+   *   caller cannot be shown (including any by someone who has blocked the
+   *   caller, which reads exactly like content that does not exist);
+   *   'validation' — reporting your own content or profile, an
+   *   unknown reason (`detail.field = 'reason'`), or a note over
+   *   `REPORT_NOTE_MAX` (`'note'`); 'rate_limited'.
+   */
+  report(input: ReportContentInput): Promise<ReportContentResult>;
+}
+
+export interface NotificationsApi {
+  /**
+   * The caller's notifications inbox (T-31, contract 3.7.0), newest first:
+   * who followed them, and who liked or commented on their posts. Nobody is
+   * notified about their own like or comment.
+   *
+   * **Grouping.** A follow and a comment are a row each. All the likes on one
+   * post are ONE row: `actors` holds the two most recent likers, `actorCount`
+   * all of them, and the row's `id` and `createdAt` are its newest like's, so
+   * a new like on an old post moves that row back to the top. Following,
+   * unfollowing and following again (or liking, unliking, liking again) never
+   * makes a second notification: the first one comes back, with its old date.
+   *
+   * **Checked at read time.** A row is shown only while it is still true: an
+   * unfollow hides that follow, an unlike that like (and shrinks its row), a
+   * deleted comment that comment, and a post that is gone (a removed or
+   * re-ranked ranking) its likes and comments. A block in either direction
+   * hides everything from that person, and unblocking brings back whatever is
+   * still true then (a block removes the follows both ways, so a follow row
+   * comes back only if they follow again). A post about
+   * an alcoholic Bev is hidden while the caller is under 21. `unreadCount` and
+   * `markRead` apply the same rules, so the three never disagree.
+   *
+   * Paged by `nextCursor` (keyset on the row's `id`): a row is on exactly one
+   * page, and a row that moves to the top while paging is not shown twice.
+   *
+   * A backend older than 3.7.0 has no inbox: it answers an empty page.
+   * @throws 'unauthorized'.
+   */
+  list(page?: PageParams): Promise<Page<Notification>>;
+
+  /**
+   * How many rows of `list` are unread (a row of likes counts once), for the
+   * badge. 0 from a backend older than 3.7.0.
+   * @throws 'unauthorized'.
+   */
+  unreadCount(): Promise<number>;
+
+  /**
+   * Marks the caller's notifications read: every one up to and including
+   * `upToId` (a `Notification.id`, normally the first row on screen), or all
+   * of them when it is left out. Idempotent. Resolves without doing anything
+   * on a backend older than 3.7.0.
+   * @throws 'unauthorized'; 'validation' — `upToId` is not a notification id.
+   */
+  markRead(upToId?: string): Promise<void>;
+
+  /**
+   * The caller's push settings (T-31 Release 2, contract 3.8.0). A push is
+   * sent only when `paused` is false AND that kind's switch is on: `follows`,
+   * `likes` and `comments` for the three inbox kinds, `posts` for "someone I
+   * chose posted a Bev" (see `setPostNotification`). Someone who never saved
+   * settings gets the defaults: not paused; `follows`, `likes` and `comments`
+   * on; `posts` off. Reading never saves anything.
+   *
+   * A backend older than 3.8.0 has no settings: it answers the defaults.
+   * @throws 'unauthorized'.
+   */
+  getSettings(): Promise<NotificationSettings>;
+
+  /**
+   * Saves all five switches at once and answers them as stored. The backend
+   * keeps exactly what it is given: what one switch does to another (turning
+   * on `posts` when the first person is chosen, say) is the app's rule, not
+   * the server's. Pausing never changes the four kind switches, so un-pausing
+   * restores exactly what was on.
+   *
+   * A backend older than 3.8.0 cannot save them, and this THROWS rather than
+   * pretend it did.
+   * @throws 'unauthorized'; 'validation' — a switch that is not a boolean
+   *   (`detail.field` names it); 'unknown' — an older backend.
+   */
+  updateSettings(settings: NotificationSettings): Promise<NotificationSettings>;
+
+  /**
+   * The people the caller follows, for choosing whose posts to be pushed
+   * about: never anyone across a block in either direction. Those already
+   * chosen (`subscribed`) come first, then by handle. `q` filters by a
+   * case-insensitive substring of the handle or the display name (a leading
+   * '@' is ignored; at most 80 characters). Paged by `nextCursor`.
+   *
+   * Every row is someone the caller follows, so `isFollowing` is always true.
+   *
+   * A backend older than 3.8.0 answers an empty page.
+   * @throws 'unauthorized'; 'validation' — `q` is over 80 characters.
+   */
+  listPostNotificationPeople(params?: PageParams & { q?: string }): Promise<Page<PostNotificationPerson>>;
+
+  /**
+   * Turns "push me when this person posts a Bev" on or off. Only for someone
+   * the caller follows; the choice is removed when the caller stops following
+   * them (an unfollow, or a block either way, which removes the follow), and
+   * a re-follow starts with it off. A post push is sent for a NEW ranking
+   * only, never a re-rank, and never for the likes or comments that person
+   * receives; it goes to the phone only and adds nothing to `list`. It is
+   * sent only while `posts` is on and the caller is not paused
+   * (`getSettings`). Idempotent both ways; turning off never fails (it is
+   * not rate-limited), whether the person exists or not.
+   *
+   * Turning on for anyone the caller does not follow is 'validation'
+   * (`detail.field` 'not following'), whoever they are: someone who does not
+   * exist, the caller themselves, and someone across a block (a block removes
+   * the follow) all read the same, so the answer never reveals a block.
+   *
+   * A backend older than 3.8.0 cannot save it, and this THROWS rather than
+   * pretend it did.
+   * @throws 'unauthorized'; 'validation' — turning on for someone the caller
+   *   does not follow; 'rate_limited' — turning on, too often; 'not_found' —
+   *   only for a follow standing beside a block, which no client path
+   *   creates; 'unknown' — an older backend.
+   */
+  setPostNotification(userId: string, on: boolean): Promise<void>;
+
+  /**
+   * Records this device's Expo push token (`ExponentPushToken[...]` or
+   * `ExpoPushToken[...]`, at most 200 characters) for the caller, so pushes
+   * reach it. Call it after every sign-in and at launch: a token another
+   * account registered moves to the caller (one device, one signed-in
+   * account), and the server keeps each user's 10 most recently seen devices.
+   * A device Expo reports as no longer registered is forgotten by the server.
+   *
+   * Resolves without doing anything on a backend older than 3.8.0.
+   * @throws 'unauthorized'; 'validation' — not an Expo push token; 'rate_limited'.
+   */
+  registerPushToken(token: string): Promise<void>;
+
+  /**
+   * Forgets this device's token, so it receives no more pushes for the
+   * caller: call it BEFORE signing out (it needs the session). Only the
+   * caller's own token is removed; anything else, or a token already gone, is
+   * a no-op. Idempotent. Resolves without doing anything on a backend older
+   * than 3.8.0.
+   * @throws 'unauthorized'.
+   */
+  unregisterPushToken(token: string): Promise<void>;
+}
+
 export interface NutritionApi {
   /** UPC-A, EAN-8 or EAN-13. null means no usable nutrition data. */
   lookupBarcode(barcode: string, signal?: AbortSignal): Promise<NutritionPreview | null>;
+  /**
+   * The product behind a barcode (UPC-A, EAN-8 or EAN-13): its name, brand and
+   * category for filling in a new Bev, with the same nutrition `lookupBarcode`
+   * returns, in one request. null means the provider has no such product, or
+   * lists nothing usable about it. It does not say whether a Bev with this
+   * barcode already exists: `bevs.create` still answers that with 'conflict'.
+   * @throws 'validation' (not a retail barcode), 'rate_limited'.
+   */
+  lookupProduct(barcode: string, signal?: AbortSignal): Promise<BarcodeProduct | null>;
 }
 
 export interface BeviApi extends AuthApi {
@@ -967,4 +1336,7 @@ export interface BeviApi extends AuthApi {
   venues: VenuesApi;
   meta: MetaApi;
   bugs: BugsApi;
+  blocks: BlocksApi;
+  reports: ReportsApi;
+  notifications: NotificationsApi;
 }

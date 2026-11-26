@@ -6,6 +6,7 @@ import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
 import FollowersScreen from '@/app/user/[id]/followers';
 import FollowingScreen from '@/app/user/[id]/following';
+import { followPill } from '@/testing/followPill';
 
 let client: QueryClient;
 
@@ -56,10 +57,10 @@ it('lists followers with follow pills that toggle, and opens a profile', async (
   expect(followers.length).toBeGreaterThan(0);
   const first = followers[0]!;
   const r = await open(`/user/${me.id}/followers`);
-  const pill = await screen.findByLabelText(`Follow ${first.displayName}`);
+  const pill = await screen.findByLabelText(followPill(first.displayName));
   expect(pill.props['aria-pressed']).toBe(first.isFollowing);
   await fireEvent.press(pill);
-  await waitFor(() => expect(screen.getByLabelText(`Follow ${first.displayName}`).props['aria-pressed']).toBe(!first.isFollowing));
+  await waitFor(() => expect(screen.getByLabelText(followPill(first.displayName)).props['aria-pressed']).toBe(!first.isFollowing));
   await waitFor(async () => expect((await api.profile.getUser(first.id)).isFollowing).toBe(!first.isFollowing));
 
   await fireEvent.press(screen.getByLabelText(new RegExp(`^${first.displayName}, @${first.handle}`)));

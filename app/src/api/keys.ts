@@ -2,7 +2,7 @@
 // hierarchical so a prefix invalidates a whole family: `keys.rankings.all` covers listMine,
 // listUser and listBucket; `keys.bevs.all` covers detail, search, duplicates and starters.
 
-import type { Bucket, CategoryId, FindDuplicatesInput, LatLngBounds, RankingSort, VenueFilters } from '@bevi/shared';
+import type { BevdScope, Bucket, CategoryId, FindDuplicatesInput, LatLng, LatLngBounds, RankingSort, VenueFilters } from '@bevi/shared';
 
 const root = ['bevi'] as const;
 
@@ -22,10 +22,14 @@ export const keys = {
   checkHandle: (handle: string) => [...root, 'checkHandle', handle] as const,
   /** `bugs.canReport()`: whether this account may file internal bug reports. */
   canReportBug: () => [...root, 'canReportBug'] as const,
+  /** `bugs.canRank()`: whether this account may rank its tickets (a founder; not a tester). */
+  canRankBug: () => [...root, 'canRankBug'] as const,
   /** `bugs.listMine()`: the caller's own tickets with their live tracker state. */
   myBugReports: () => [...root, 'myBugReports'] as const,
 
   me: () => [...root, 'me'] as const,
+  /** `profile.getCategoryPicks()`: the caller's go-to categories from onboarding, favourite first. */
+  categoryPicks: () => [...root, 'categoryPicks'] as const,
 
   users: {
     all: [...root, 'users'] as const,
@@ -50,11 +54,18 @@ export const keys = {
     suggested: () => [...root, 'follows', 'suggested'] as const,
   },
 
+  /** `blocks.list`: the people the caller has blocked (Settings > Blocked accounts). */
+  blocks: {
+    all: [...root, 'blocks'] as const,
+    list: () => [...root, 'blocks', 'list'] as const,
+  },
+
   categories: () => [...root, 'categories'] as const,
 
   bevs: {
     all: [...root, 'bevs'] as const,
     detail: (id: string) => [...root, 'bevs', 'detail', id] as const,
+    icon: (id: string) => [...root, 'bevs', 'icon', id] as const,
     search: (q: string, categoryId?: CategoryId) => [...root, 'bevs', 'search', q, categoryId ?? null] as const,
     duplicates: (input: FindDuplicatesInput) => [...root, 'bevs', 'duplicates', input] as const,
     starterCandidates: () => [...root, 'bevs', 'starterCandidates'] as const,
@@ -69,6 +80,12 @@ export const keys = {
     /** The ranking flow's list for one Bev (`loadPlacementList`): the bucket plus its tiers. */
     placement: (bucket: Bucket | undefined, bevId: string | undefined) =>
       [...root, 'rankings', 'placement', bucket ?? null, bevId ?? null] as const,
+    /** `rankings.getVenue`: where the caller had one Bev (the re-rank flow). */
+    venue: (bevId: string) => [...root, 'rankings', 'venue', bevId] as const,
+    /** `rankings.locationSummary`: how much of the Bev'd list has a place (the Map tab's nudge). */
+    locationSummary: () => [...root, 'rankings', 'locationSummary'] as const,
+    /** The caller's Bevs with no place, newest first: what the Map tab's "Add them" walks through. */
+    unplaced: () => [...root, 'rankings', 'unplaced'] as const,
   },
 
   wantToTry: () => [...root, 'wantToTry'] as const,
@@ -76,6 +93,11 @@ export const keys = {
   feed: () => [...root, 'feed'] as const,
   /** `feed.listUser` for one person; nested under `feed()` so every FeedItem cache operation on that prefix covers it. */
   feedUser: (userId: string) => [...root, 'feed', 'user', userId] as const,
+  /**
+   * `feed.getPost`: the one post a notification opens (T-31). Under `feed()` too, and cached as a
+   * one-item `Page` (`usePost`), so every FeedItem patch (like, comment, Want to Try, block) reaches it.
+   */
+  post: (id: string) => [...root, 'feed', 'post', id] as const,
   /** Every post's thread: a profile change (name, photo) invalidates them all, since each Comment carries its author. */
   commentsAll: [...root, 'comments'] as const,
   /** A post's thread (`comments.list`, newest-first pages). */
@@ -108,6 +130,36 @@ export const keys = {
     detail: (venueId: string) => [...root, 'venues', 'detail', venueId] as const,
     /** `venues.neighborhoods`: the Neighborhood filter's vocabulary. */
     neighborhoods: () => [...root, 'venues', 'neighborhoods'] as const,
+    /**
+     * `venues.search` (the place picker). Pass `searchPosition` output, never a raw fix, so standing
+     * still does not ask again every time the GPS wobbles.
+     */
+    search: (query: string, near: LatLng | null) => [...root, 'venues', 'search', query, near?.lat ?? null, near?.lng ?? null] as const,
+    /** `venues.searchMore`: the outside directory, asked only when the user reaches for it. */
+    searchMore: (query: string, near: LatLng | null) =>
+      [...root, 'venues', 'searchMore', query, near?.lat ?? null, near?.lng ?? null] as const,
+    /** Everything about where Bevs were had: the map's pins and what is behind each. */
+    bevd: [...root, 'venues', 'bevd'] as const,
+    /** `venues.recent`: the picker's recently used places. Under `bevd`, so a changed place refreshes it. */
+    recent: (limit: number) => [...root, 'venues', 'bevd', 'recent', limit] as const,
+    /** `venues.bevdMap` for one scope. */
+    bevdMap: (scope: BevdScope) => [...root, 'venues', 'bevd', 'map', scope] as const,
+    /** `venues.bevdAt`: what was had at one venue. */
+    bevdAt: (venueId: string, scope: BevdScope) => [...root, 'venues', 'bevd', 'at', venueId, scope] as const,
+  },
+
+  /** The notifications inbox (T-31): `notifications.list` and the bell's `notifications.unreadCount`. */
+  notifications: {
+    all: [...root, 'notifications'] as const,
+    list: () => [...root, 'notifications', 'list'] as const,
+    unreadCount: () => [...root, 'notifications', 'unreadCount'] as const,
+    /** T-31 Release 2: the push settings (`notifications.getSettings`). */
+    settings: () => [...root, 'notifications', 'settings'] as const,
+    /** Post notifications' people (`notifications.listPostNotificationPeople`), per search. */
+    postPeopleAll: [...root, 'notifications', 'postPeople'] as const,
+    postPeople: (q: string) => [...root, 'notifications', 'postPeople', q] as const,
+    /** How many people are chosen, for Settings' "Choose people" row. */
+    chosenCount: () => [...root, 'notifications', 'chosenCount'] as const,
   },
 
   recommendations: (limit?: number) => [...root, 'recommendations', limit ?? null] as const,

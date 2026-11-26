@@ -6,18 +6,22 @@ import type { BeviApi } from '@bevi/shared';
 import { createNutritionApi } from './nutrition';
 import { createAuthApi } from './auth';
 import { createBevsApi } from './bevs';
+import { createBlocksApi } from './blocks';
 import { createBugsApi } from './bugs';
 import { createCategoriesApi } from './categories';
 import { type BeviApiConfig, createSupabaseClientFor } from './client';
 import { createCommentsApi } from './comments';
 import { createFeedApi } from './feed';
 import { createFollowsApi } from './follows';
+import { withGeneratedIcons } from './generatedIcons';
 import { createLeaderboardApi } from './leaderboard';
 import { createMediaApi } from './media';
 import { createMetaApi } from './meta';
+import { createNotificationsApi } from './notifications';
 import { createProfileApi } from './profile';
 import { createRankingsApi } from './rankings';
 import { createRecsApi } from './recs';
+import { createReportsApi } from './reports';
 import { createVenuesApi } from './venues';
 import { registerAutoRefreshTarget } from './session';
 import { createSnapshotCache } from './snapshot';
@@ -47,7 +51,10 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
   });
   const profile = createProfileApi(client);
 
-  return {
+  // Every method that answers with a Bev has its `iconUrl` filled with the
+  // Bev's own generated icon first, so a created icon draws exactly where an
+  // authored one does. See generatedIcons.ts for why it wraps the whole API.
+  return withGeneratedIcons(client, {
     ...auth,
     nutrition: createNutritionApi(),
     profile: {
@@ -76,8 +83,11 @@ export function createBeviApi(config: BeviApiConfig): BeviApi {
     recs: createRecsApi(client, snapshots),
     venues: createVenuesApi(client),
     bugs: createBugsApi(client),
-    meta: createMetaApi(),
-  };
+    blocks: createBlocksApi(client),
+    reports: createReportsApi(client),
+    notifications: createNotificationsApi(client),
+    meta: createMetaApi(client),
+  });
 }
 
 export { ApiError, isApiError } from '@bevi/shared';

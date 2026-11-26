@@ -1,4 +1,4 @@
-import { isApiError, type NutritionPreview, type BevSummary, type CreateBevInput, type FindDuplicatesInput, type ValidationErrorDetail } from '@bevi/shared';
+import { isApiError, type BarcodeProduct, type CategoryId, type NutritionPreview, type BevSummary, type CreateBevInput, type FindDuplicatesInput, type ValidationErrorDetail } from '@bevi/shared';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -12,6 +12,7 @@ import { ProgressDots } from '@/components/ProgressDots';
 import { useDebouncedValue } from '@/features/add-bev/useDebouncedValue';
 import { formErrorMessage } from '@/features/auth/formError';
 import { categoryById, visibleCategories } from '@/lib/categories';
+import { announce } from '@/lib/useAnnounce';
 import { useBack } from '@/lib/useBack';
 import { useOnline } from '@/lib/useOnline';
 import { radius, spacing, type, useTheme } from '@/theme';
@@ -22,6 +23,9 @@ import {
   LABEL_REUPLOAD,
   OFFLINE_BANNER,
   PHOTO_REUPLOAD,
+  SCAN_CONFIRM_NUTRITION,
+  scanFilledText,
+  type ScanField,
   STEP_COUNT,
   STEP_TITLES,
   STILL_PROCESSING,
@@ -43,6 +47,17 @@ import { usePhotoUpload } from './usePhotoUpload';
 export const DUPLICATES_DEBOUNCE_MS = 400;
 
 type Step = 0 | 1 | 2;
+
+/**
+ * What a scan does to one field. `found` (what the product lists) goes in when the field is empty or
+ * still holds what the last scan `wrote`. When the product lists nothing, the last scan's value is
+ * cleared: it describes another product. Anything the person typed is left alone (`undefined`).
+ */
+function scanValue<T>(current: T, empty: boolean, wrote: T | undefined, found: T | null, blank: T): T | undefined {
+  const fromLastScan = !empty && wrote !== undefined && current === wrote;
+  if (found !== null) return empty || fromLastScan ? found : undefined;
+  return fromLastScan ? blank : undefined;
+}
 
 const DETAIL_FIELDS = new Set(['name', 'brand', 'flavor', 'categoryId', 'priceTier']);
 
@@ -67,6 +82,12 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
   const photo = usePhotoUpload('bev-photo');
   const label = usePhotoUpload('label');
   const [nutrition, setNutrition] = useState<NutritionPreview | null>(null);
+  // The label the last scan found, confirmed (then it is `nutrition` too) or still waiting.
+  const [scanned, setScanned] = useState<NutritionPreview | null>(null);
+  const [scanNotice, setScanNotice] = useState<string | null>(null);
+  // What the last scan wrote into the form. A field still holding it was not typed, so the next scan
+  // replaces it: scanning the wrong can and then the right one must not mix the two products.
+  const scanWrote = useRef<Partial<Pick<DetailsForm, ScanField>>>({});
 
   const [step, setStep] = useState<Step>(0);
   const [form, setForm] = useState<DetailsForm>({
@@ -129,6 +150,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
 
   const dirty =
     !!nutrition ||
+    !!scanned ||
     !!photo.photo ||
     !!label.photo ||
     !!form.name.trim() ||
@@ -143,12 +165,25 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
     setConfirmDiscard(false);
     back();
   };
+  // Discard closes its sheet first and leaves once that sheet is gone: popping the screen under a
+  // Modal that is still presented leaves iOS with a stuck or blank screen (as in RankFlow).
+  const discarding = useRef(false);
+  const discard = () => {
+    discarding.current = true;
+    abort.current.aborted = true;
+    setConfirmDiscard(false);
+  };
+  const discardClosed = () => {
+    if (!discarding.current) return;
+    discarding.current = false;
+    leave();
+  };
   const close = () => (dirty && !existingId ? setConfirmDiscard(true) : leave());
 
-  const goRank = (bevId: string) => {
+  const goRank = (bevId: string, created = false) => {
     abort.current.aborted = true;
     // Replace, so back from the ranking flow doesn't return to the wizard.
-    router.replace({ pathname: '/rank/[bevId]', params: { bevId } });
+    router.replace({ pathname: '/rank/[bevId]', params: { bevId, ...(created ? { entry: 'created' } : {}) } });
   };
 
   const patch = (p: Partial<DetailsForm>) => {
@@ -160,6 +195,38 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
       return next;
     });
     setSubmitMessage(null);
+  };
+
+  // A scan fills in what is still empty or what the last scan put there, and never replaces what was
+  // typed. The name carried over from search counts as empty: it is what the person searched for,
+  // not what they called the Bev. A product in a category the person can't see (alcohol, under age)
+  // fills nothing at all and is refused (`false`): the scan shows it as a barcode Bevi doesn't know.
+  // What an earlier scan wrote stays, and stays that scan's to replace.
+  const fillFromProduct = (product: BarcodeProduct): boolean => {
+    if (product.categoryId && !categories.some((c) => c.id === product.categoryId)) return false;
+    const wrote = scanWrote.current;
+    const category = product.categoryId;
+    const name = scanValue(form.name, !form.name.trim() || form.name === initialName, wrote.name, product.name, '');
+    const brand = scanValue(form.brand, !form.brand.trim(), wrote.brand, product.brand, '');
+    const categoryId = scanValue<CategoryId | null>(form.categoryId, !form.categoryId, wrote.categoryId, category, null);
+    const change: Partial<Pick<DetailsForm, ScanField>> = {
+      ...(name !== undefined ? { name } : {}),
+      ...(brand !== undefined ? { brand } : {}),
+      ...(categoryId !== undefined ? { categoryId } : {}),
+    };
+    if (Object.keys(change).length > 0) patch(change);
+    // Only what this scan put in; a field it cleared is the person's to fill again.
+    const filled: Partial<Pick<DetailsForm, ScanField>> = {
+      ...(name ? { name } : {}),
+      ...(brand ? { brand } : {}),
+      ...(categoryId ? { categoryId } : {}),
+    };
+    scanWrote.current = filled;
+    const text = scanFilledText(Object.keys(filled) as ScanField[], !!product.nutrition);
+    setScanNotice(text);
+    // Once per scan, not whenever the line under the button changes (iOS; the web has its live region).
+    announce(product.nutrition ? `${text} ${SCAN_CONFIRM_NUTRITION}` : text);
+    return true;
   };
 
   const pickPhoto = async (source: PhotoSource) => {
@@ -233,6 +300,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         const field = (e.detail as ValidationErrorDetail | undefined)?.field;
         if (field === 'nutrition') {
           setNutrition(null);
+          setScanned(null);
           setErrors({ nutrition: NUTRITION_SAVE_FAILED });
           setStep(1);
           return;
@@ -301,7 +369,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
             setCreatedWithoutNutritionId(bev.id);
             setSubmitMessage('Your Bev was added, but we couldn’t save its nutrition label. Continue without nutrition?');
           } else {
-            goRank(bev.id);
+            goRank(bev.id, true);
           }
         }
       } catch (e) {
@@ -333,6 +401,10 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         label={label}
         nutrition={nutrition}
         onNutritionChange={(value) => { setNutrition(value); setErrors((e) => ({ ...e, nutrition: undefined })); }}
+        scanned={scanned}
+        onScannedChange={setScanned}
+        onProduct={fillFromProduct}
+        scanNotice={scanNotice}
         onPickLabel={(s) => void pickLabel(s)}
         similarCount={duplicatesQ.data?.length ?? 0}
         categoryHint={categoryHint}
@@ -347,7 +419,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         checkFailed={duplicatesQ.isError}
         onRetryCheck={() => void duplicatesQ.refetch()}
         onPick={pickExisting}
-        onCreate={() => createdWithoutNutritionId ? goRank(createdWithoutNutritionId) : void submit()}
+        onCreate={() => createdWithoutNutritionId ? goRank(createdWithoutNutritionId, true) : void submit()}
         creating={creating}
         processing={processing}
         submitMessage={submitMessage}
@@ -376,7 +448,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
           <Text style={[type.body, styles.flex, { color: colors.text }]}>{OFFLINE_BANNER}</Text>
         </View>
       ) : null}
-      <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.fill} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {step < 2 && !existingId ? (
           <Text style={[type.displayDrop, styles.heading, { color: colors.text }]} accessibilityRole="header">
             {STEP_TITLES[step]}
@@ -408,7 +480,7 @@ export function CreateBevWizard({ initialName = '' }: CreateBevWizardProps) {
         }}
         onClose={() => setCategoryOpen(false)}
       />
-      <DiscardBevSheet open={confirmDiscard} onDiscard={leave} onKeep={() => setConfirmDiscard(false)} />
+      <DiscardBevSheet open={confirmDiscard} onDiscard={discard} onKeep={() => setConfirmDiscard(false)} onClosed={discardClosed} />
     </SafeAreaView>
   );
 }

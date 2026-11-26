@@ -1,10 +1,11 @@
 // Test controls for the FakeApi. Suites import `controls` from '@/testing/fakeApi'. After a control
 // changes data, invalidate TanStack Query (`queryClient.invalidateQueries()`) to refetch.
 
-import type { ApiErrorCode, BugTicketState, IconStatus } from '@bevi/shared';
+import type { ApiErrorCode, AppConfig, BugTicketState, IconStatus } from '@bevi/shared';
 
 import { getFakeApi } from './instance';
 import type { Latency } from './FakeApi';
+import type { FakePendingPush } from './FakeApi';
 
 export interface FakeControls {
   /** The next call (to `method`, e.g. 'rankings.submitRanking', or to any method) rejects with `code`. */
@@ -18,11 +19,17 @@ export interface FakeControls {
   /** Sign in as a fixture user without a password, e.g. ME.handle, FRIEND.handle, MINOR.handle (under 21). */
   signInAs(handle: string): void;
   /**
-   * Make the signed-in user an internal bug reporter (`profiles.role` 'admin' or 'tester'), which
-   * is what `bugs.canReport()` answers and what `bugs.report()` requires. Off after
-   * `resetToFixtures()`.
+   * Make the signed-in user an internal bug reporter who is a founder (`profiles.role` 'admin'):
+   * `bugs.canReport()` and `bugs.canRank()` both answer true, and `bugs.report()` and
+   * `bugs.place()` are allowed. Off after `resetToFixtures()`.
    */
   setInternalReporter(internal: boolean): void;
+  /**
+   * Make the signed-in user a tester (`profiles.role` 'tester'): an internal reporter who may not
+   * rank. `bugs.canRank()` answers false, `bugs.place()` throws 'unauthorized', and every
+   * `listMine` rank is null. `setInternalReporter(false)` or `resetToFixtures()` undoes it.
+   */
+  setTesterReporter(): void;
   /**
    * Move one of the fake's bug tickets to a workflow state, as a founder would on the board: 'in_review'
    * makes My reports offer Verified on device; anything but triage/todo/in_progress takes it out
@@ -37,6 +44,34 @@ export interface FakeControls {
    * no job in the fake, only the state a screen would see.
    */
   setIconStatus(bevId: string, status: IconStatus | null): void;
+  /**
+   * Edit what `meta.getAppConfig` answers, as an operator would the `app_config` row: the fields
+   * given replace the current ones, e.g. `{ maintenance: true, maintenanceMessage: 'Back by 9pm ET.' }`
+   * or `{ minAppVersion: '9.0.0' }`. Versions must be `x.y.z`. Back to the default (`maintenance`
+   * false, no message, `minAppVersion` '0.1.0', `minContractVersion` '0.0.0') after
+   * `resetToFixtures()`. To make the read fail instead, `failNext(code, 'meta.getAppConfig')`.
+   */
+  setAppConfig(config: Partial<AppConfig>): void;
+  /**
+   * Empty every inbox, ME's fixture notifications included, so `notifications.list` answers an
+   * empty page and `unreadCount` 0 until something new happens. ME's fixtures (an unread pair of
+   * likes from friend_a and friend_b on ME's newest post, an unread comment from friend_a, an unread
+   * follow from friend_e whom ME does not follow back, and three read ones over a week old) come
+   * back with `resetToFixtures()`.
+   */
+  clearNotifications(): void;
+  /**
+   * T-31 Release 2: the pushes the server would send this user now (kind, actor handle, post id),
+   * oldest first. The fake sends nothing; this applies claim_push_batch's rules to what was queued:
+   * pause and the four kind switches (`notifications.updateSettings`), post subscriptions
+   * (`setPostNotification`; a post push for a NEW ranking only, never a re-rank), blocks either
+   * way, the age gate, and that it is still true (an unlike, a deleted comment or an unfollow
+   * drops it). Unlike the server it does not require a registered device; `pushTokens` lists them.
+   * Empty after `resetToFixtures()`.
+   */
+  pendingPushes(userId: string): FakePendingPush[];
+  /** T-31 Release 2: the Expo push tokens `notifications.registerPushToken` holds for this user, newest first. */
+  pushTokens(userId: string): string[];
 }
 
 export const controls: FakeControls = {
@@ -46,6 +81,11 @@ export const controls: FakeControls = {
   emptyUser: () => getFakeApi().emptyUser(),
   signInAs: (handle) => getFakeApi().signInAs(handle),
   setInternalReporter: (internal) => getFakeApi().setInternalReporter(internal),
+  setTesterReporter: () => getFakeApi().setTesterReporter(),
   setBugTicketState: (ticketId, state) => getFakeApi().setBugTicketState(ticketId, state),
   setIconStatus: (bevId, status) => getFakeApi().setIconStatus(bevId, status),
+  setAppConfig: (config) => getFakeApi().setAppConfig(config),
+  clearNotifications: () => getFakeApi().clearNotifications(),
+  pendingPushes: (userId) => getFakeApi().pendingPushes(userId),
+  pushTokens: (userId) => getFakeApi().pushTokens(userId),
 };

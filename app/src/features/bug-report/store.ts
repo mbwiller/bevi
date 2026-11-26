@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { revokeIfBlob, type PreparedPhoto } from '@/features/create-bev/photo';
 import { useSession } from '@/state/session';
 
+import { CAPABILITIES } from './capabilities';
 import { collectContext, type ContextSources } from './context';
 import {
   clearDraft,
@@ -13,10 +14,10 @@ import {
   newIdempotencyKey,
   saveDraft,
   saveUnplaced,
-  webStorage,
   type BugDraft,
   type StorageLike,
 } from './draft';
+import { defaultStorage } from './draftStorage';
 import {
   safeCapture,
   safeRecordNav,
@@ -51,7 +52,7 @@ import type { PickLevel, Shot } from './types';
 /**
  * The reporter's state, module-level so it survives every navigation: the note being written, select
  * mode and its live highlight, a step recording, the outbox of notes being filed, and the tickets
- * still to be placed in the tester's ranked list. It belongs to one signed-in account: leaving the
+ * still to be placed in the reporter's ranked list (offered only to a founder: ReportHost). It belongs to one signed-in account: leaving the
  * signed-in state wipes it, and storage is never restored for another handle. The transitions on the note are the pure functions of
  * model.ts; this file runs them and does the capturing, through the guarded engine (engine.ts).
  *
@@ -103,6 +104,8 @@ export interface ReportState {
   notice: string | null;
   /** The handle of the account this state belongs to. */
   owner: string | undefined;
+  /** A full-screen flow is on show (iOS: rank, New Bev, the photo viewer), where the two sheets can't open. */
+  onFullScreen: boolean;
 }
 
 function initialState(): ReportState {
@@ -123,6 +126,7 @@ function initialState(): ReportState {
     recording: null,
     notice: null,
     owner: undefined,
+    onFullScreen: false,
   };
 }
 
@@ -133,16 +137,16 @@ const set = useReport.setState;
 
 // ---------------------------------------------------------------- configuration
 
-/** Undefined until first used: `localStorage`, looked up then. */
+/** Undefined until first used: the platform's storage (draftStorage.ts), looked up then. */
 let injected: StorageLike | null | undefined;
 
-/** Tests inject an in-memory storage; the app uses `localStorage`. */
+/** Tests inject an in-memory storage; the app uses `localStorage` on the web and AsyncStorage on iOS. */
 export function setReportStorage(next: StorageLike | null): void {
   injected = next;
 }
 
 function storage(): StorageLike | null {
-  if (injected === undefined) injected = webStorage();
+  if (injected === undefined) injected = defaultStorage();
   return injected;
 }
 
@@ -560,10 +564,49 @@ export function setPanelHeight(panelHeight: number): void {
 
 // ---------------------------------------------------------------- the note
 
-/** The note, a new empty one (no capture) when there is none. Settings' "Report a bug" too. */
-export function openBlankNote(): void {
+/** Why Filed reports and the rank sheet stay closed over a full-screen flow (capabilities.ts, `sheetsOverFullScreen`). */
+export const FULL_SCREEN_SHEET_NOTICE = "Filed reports open from the app's other screens, not from here.";
+
+/**
+ * The note: the one being written when there is one, else a new one. Settings' "Report a bug" too.
+ *
+ * Where the platform takes the picture first (`CAPABILITIES.shotFirst`, iOS), a new note is not
+ * opened until a screenshot of the screen it was opened from has been taken, and then opens with it
+ * attached, so the report shows what the tester saw and the reporter is not in it. `shot: false`
+ * opens it empty (a link to /report-bug: the screen behind it is not the one being reported).
+ * Where it does not (the web), the note opens at once and a picture is something the tester adds.
+ */
+export function openBlankNote(opts: { shot?: boolean } = {}): void {
+  if (CAPABILITIES.shotFirst && opts.shot !== false && !get().draft) {
+    openAfterScreenshot();
+    return;
+  }
   const { created } = ensureDraft();
   set({ panel: 'open', focusNote: created, sheet: null });
+}
+
+/** A screenshot is being taken before a note opens: a second press meanwhile is the same press. */
+let shooting = false;
+
+function openAfterScreenshot(): void {
+  if (shooting) return;
+  shooting = true;
+  const started = generation;
+  // The note is about the screen it was opened from, as it was then.
+  const { visit, route } = get().nav;
+  const environment = environmentNow();
+  void safeCapture([]).then((shot) => {
+    shooting = false;
+    // Reset meanwhile (sign-out, another account), or a note appeared some other way: nothing to open.
+    if (generation !== started || get().draft) {
+      safeRelease(shot);
+      return;
+    }
+    const id = localId('shot');
+    const begun = beginScreenCapture(emptyDraft(newIdempotencyKey(), environment), visit, route, id);
+    const { draft } = begun ? finishScreenCapture(begun, id, shot) : { draft: emptyDraft(newIdempotencyKey(), environment) };
+    set({ draft, panel: 'open', focusNote: true, sheet: null });
+  });
 }
 
 export function setAside(): void {
@@ -744,13 +787,31 @@ export function hideToast(id?: number): void {
 
 // ---------------------------------------------------------------- sheets and ranking
 
+/** The host tells the store whether a full-screen flow is on show (iOS: where the sheets can't open). */
+export function setOnFullScreen(onFullScreen: boolean): void {
+  if (get().onFullScreen !== onFullScreen) set({ onFullScreen });
+}
+
+/** Whether Filed reports and the rank sheet can open now. */
+export function sheetsAvailable(s: ReportState): boolean {
+  return CAPABILITIES.sheetsOverFullScreen || !s.onFullScreen;
+}
+
 export function openReports(): void {
+  if (!sheetsAvailable(get())) {
+    set({ notice: FULL_SCREEN_SHEET_NOTICE });
+    return;
+  }
   set({ sheet: 'reports', picking: null });
 }
 
 /** The rank sheet, placing `ids` in order. */
 export function openRank(ids: readonly string[]): void {
   if (ids.length === 0) return;
+  if (!sheetsAvailable(get())) {
+    set({ notice: FULL_SCREEN_SHEET_NOTICE });
+    return;
+  }
   set({ sheet: 'rank', rankQueue: [...new Set(ids)], picking: null, toast: null });
 }
 

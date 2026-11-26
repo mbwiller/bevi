@@ -14,6 +14,7 @@ import { controls } from '@/testing/fakeApi';
 import { POPULAR_COUNT } from '../popular';
 import { ADD_NEW, POPULAR_TITLE } from '../SearchPanel';
 import { CANCEL_SETTLE_MS, SEARCH_PLACEHOLDER, SEARCH_TITLE } from '../SearchScreen';
+import { followPill } from '@/testing/followPill';
 
 const mockPush = jest.fn();
 const mockSetParams = jest.fn();
@@ -103,6 +104,7 @@ const LAGER: LeaderboardRow = {
     categoryId: 'beer',
     photoUrl: null,
     iconUrl: null,
+    iconLabelBand: null,
     photoStatus: 'ready',
     priceTier: 1,
     priceEstimated: false,
@@ -621,27 +623,27 @@ describe('people rows', () => {
     expect(first.isFollowing).toBe(false);
     await renderSearch();
     await type(`@${first.handle}`);
-    const pill = await screen.findByLabelText(`Follow ${first.displayName}`);
+    const pill = await screen.findByLabelText(followPill(first.displayName));
     expect(pill.props['aria-pressed']).toBe(false);
 
     controls.setLatency(1000);
     await fireEvent.press(pill);
     // Flips while the server is still answering.
-    await waitFor(() => expect(screen.getByLabelText(`Follow ${first.displayName}`).props['aria-pressed']).toBe(true));
+    await waitFor(() => expect(screen.getByLabelText(followPill(first.displayName)).props['aria-pressed']).toBe(true));
     expect(client.isMutating()).toBe(1);
     await waitFor(async () => expect((await api.profile.getUser(first.id)).isFollowing).toBe(true));
-    expect(screen.getByLabelText(`Follow ${first.displayName}`).props['aria-pressed']).toBe(true);
+    expect(screen.getByLabelText(followPill(first.displayName)).props['aria-pressed']).toBe(true);
   });
 
   it('rolls a failed follow back', async () => {
     const first = (await api.follows.suggested())[0]!;
     await renderSearch();
     await type(`@${first.handle}`);
-    const pill = await screen.findByLabelText(`Follow ${first.displayName}`);
+    const pill = await screen.findByLabelText(followPill(first.displayName));
     controls.failNext('network', 'follows.follow');
     await fireEvent.press(pill);
     await waitFor(() => expect(client.isMutating()).toBe(0));
-    expect(screen.getByLabelText(`Follow ${first.displayName}`).props['aria-pressed']).toBe(false);
+    expect(screen.getByLabelText(followPill(first.displayName)).props['aria-pressed']).toBe(false);
   });
 });
 

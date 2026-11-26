@@ -10,7 +10,7 @@ const R = {
 - Provide: \`height\` (28 in headers, the only in-app size), \`tone\` = \`brand\` (default), \`inverse\` (on \`tasteCard\` or a photo) or \`mono\` (inherits \`currentColor\`).
 - It is outlined SVG, so it never depends on Fredoka loading. Never retype "bevi" in a font to stand in for it.
 - Do: sit it at the header's left on the 16pt gutter (the Feed). Don't: recolour the bubbles, add a tagline beside it in the header, or set it in Beli's teal or a serif.`,
-  Icon: `Lucide outline icons, the 55 the app uses, including one per drink category.
+  Icon: `Lucide outline icons, the 60 the app uses, including one per drink category.
 
 - Provide: \`name\` (see \`Bevi.iconNames\`), \`size\` (28 for header and action rows, 24 in profile rows and stat cards, 16 inline in meta lines), \`strokeWidth\` (1.6–1.75 at 24–28, 2 at 16), \`filled\` for a saved bookmark or a liked heart.
 - Colour comes from CSS \`color\`: \`text\` by default, \`primary\` for an active or saved state, \`textSecondary\` for chevrons and recents.
@@ -45,7 +45,15 @@ const R = {
 
 - Provide: \`name\`, \`src\`, \`onChange\` (opens the photo picker: on the web the file input, which on an iPhone offers the camera or the library), \`onRemove\`, \`busy\` (a spinner over the circle while the picture uploads; both buttons disabled), \`error\` (a \`scoreLow\` caption: "Couldn't upload your photo. Try another one.").
 - A chosen photo is saved as soon as it uploads, with no Save step: the circle shows the new picture at once and it appears everywhere the person's Avatar does. Removing goes back to initials.
-- Photos are resized to 512pt on the longest edge and re-encoded as JPEG before upload (EXIF dropped), the same path as Bev photos at 1600pt.`,
+- A picked photo goes through the PhotoCropper first, so the person chooses what the circle shows. What is uploaded is that square, resized to 512pt and re-encoded as JPEG (EXIF dropped), the same path as Bev photos at 1600pt.`,
+  PhotoCropper: `The step between picking a profile photo and uploading it: the whole screen, "Move and scale" over the photo, with the circle the Avatar will show cut out of a \`photoScrim\`, then "Use photo" and "Cancel".
+
+- Provide: \`src\` and the photo's \`width\` and \`height\` in pixels (upright, as decoded), \`onDone\` (gets the framed square in the photo's own pixels: \`x\`, \`y\`, \`size\`), \`onCancel\`.
+- It opens with the photo just filling the circle, centred. Drag to move it, pinch to zoom, up to 4 times (\`CROP_MAX_ZOOM\`); in this web reference the wheel zooms. A double tap zooms to 2 times, and back to the start. The photo always covers the circle, so there is never an empty edge inside it: it stops at its own edges and cannot be zoomed out past "fills the circle".
+- The stage is a full-width square on \`input\`; the circle is inset by the 16pt gutter and ringed 2pt in \`onDeep\`. Outside the circle the photo stays visible under the scrim, so it is clear what is being left out.
+- With VoiceOver the photo is one adjustable element: swipe up and down to zoom. Moving it needs the drag.
+- One \`primary\` Button, "Use photo", over a \`ghost\` "Cancel". Cancel uploads nothing and leaves the current photo as it was. After "Use photo" this step closes and the AvatarPicker shows its uploading spinner.
+- It comes up over the Edit profile sheet and over the onboarding profile step. Don't use it for Bev photos: a Bev's tile is not a crop of a photo.`,
   AvatarStack: `Overlapping avatars for "Friends who've had it" on Bev detail and "Bev'd it too" on a FeedPost, with a "+N" chip past \`max\`.
 
 - Provide: \`people\` ({ name, src? }), \`size\` (32 on Bev detail, 24 on a post), \`max\` (4; a post shows 2).
@@ -62,6 +70,7 @@ const R = {
   IconButton: `A bare 28pt outline icon with a 44pt target, or the grey 32pt close circle.
 
 - Provide: \`icon\`, \`label\` (required: it is the accessible name), \`variant\` (plain or filled), optional \`badge\` count.
+- The \`badge\` is \`onDeep\` 11pt bold on \`badgeRed\` (5.2:1) and shows nothing at 0. It is not read out, so the \`label\` says the number as well: "Notifications, 3 unread".
 - Header icons sit 20pt apart; the close circle is the ranking flow's and the create-Bev wizard's dismiss.
 - A press gives way a little (scale 0.98, opacity 0.7 over \`fast\`), like every tappable row and card.`,
   LikeButton: `The post's like control, Instagram's heart: a 28pt \`heart\`, outline in \`text\` until liked, then filled \`primary\`, with the like count beside it.
@@ -96,11 +105,19 @@ const R = {
   PriceTierPicker: `Four tappable "$" cells plus "Not sure, estimate it", for step 2 of the create-Bev wizard.
 
 - Provide: \`value\` 1–4 or null, \`estimated\`, \`onChange(tier, estimated)\`. Choosing "estimate" sends \`priceTier: null, priceEstimated: true\`.`,
+  PickTile: `One category in onboarding's "What are your go-tos?" step: a Bev's art over the category's label, in a three-column grid. Tap up to three, favorite first; the order they were tapped in is the ranking, and each picked tile shows its number.
+
+- Provide: \`label\` (the category's label from \`Bevi.categories\`), \`src\` or \`art\` (the category's most-rated starter Bev, as BevImage takes it; the category's own BevArt when it has none), \`rank\` (1, 2 or 3 once picked), \`disabled\`, \`onClick\`.
+- The grid: three equal columns on the 16pt gutter, 12pt apart, each row as tall as its tallest tile. A tile is BevImage 56 over the label in \`body\` at weight 600, centred, at most two lines, on \`surface\` with a 1pt \`border\` and \`radius-card\`. Offer every category the person can see except Other, in catalog order; never the alcoholic three to an under-21.
+- **Picked:** \`primaryTint\` with a 2pt \`primary\` rim, and the number in a 26pt \`primary\` badge (\`onPrimary\` text, tabular) at the top right. The number carries the order, so the state never rests on colour, and the accessible name says it too: "Coffee, your number 1 pick", with \`aria-pressed\`.
+- Tapping a picked tile drops it, and the later picks move up one: the badges renumber, nothing else moves.
+- **Dimmed** (\`disabled\`, once three are picked): the unpicked tiles' art fades to 35% and their label goes \`textSecondary\`. A tap does nothing, and the accessible name says why ("Wine. You've picked 3 already"). The line under the grid says what to do instead: "That's your 3. Tap one to swap it out."
+- Motion: the tile gives way under a press (Press), and the badge pops in when a tap picks it (Change, \`base\`). Reduce Motion drops the pop and the scale; the badge just appears.`,
   Header: `The 44pt screen header: the wordmark or a 20pt bold title on the left, 28pt icons on the right; Lists centres a caps title instead.
 
-- Provide: \`wordmark\` or \`title\`, \`centered\` for Lists ("LISTS"), \`actions\` ([{ icon, label, onClick, variant? }]), \`onBack\` for pushed screens (People, Bev detail).
+- Provide: \`wordmark\` or \`title\`, \`centered\` for Lists ("LISTS"), \`actions\` ([{ icon, label, badge?, onClick, variant? }]), \`onBack\` for pushed screens (People, Notifications, Bev detail).
 - A tab's own screen names itself with a plain title and has nothing to close: "Add a Bev", "Map".
-- No bell or calendar in v1.`,
+- The Feed's header carries the bell, then Find people. The bell's \`badge\` is the unread count, and its label says the count too. No calendar.`,
   SectionHeader: `Caps section label ("FEATURED BEVS", "YOUR FEED") with an optional "See all" link in \`primary\`.
 
 - Provide: \`title\` (written in sentence case; it renders uppercase), \`action\` and \`onAction\`.
@@ -132,7 +149,7 @@ const R = {
 - A press gives way a little (scale 0.98, opacity 0.7 over \`fast\`), and the bookmark pops when it is toggled, like the heart.`,
   FeedPost: `A ranking in the Feed and on Profile › Activity: "**Arjun** Bev'd **Horchata**" beside an Avatar 44 and a ScoreBubble, the Bev's picture with the note next to it, who else Bev'd it, and the actions.
 
-- Provide: \`actor\` (or \`you\` for "You"), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`liked\`, \`likeCount\`, \`comments\`, \`commentCount\`, \`alsoBevdBy\`, \`alsoBevdCount\`, \`onLike\`, \`onComment\`, \`onRank\`, \`onSave\`, \`onOpen\`, and in Explore \`following\` and \`onFollow\`.
+- Provide: \`actor\` (or \`you\` for "You"), \`bev\`, \`score\`, \`note\`, \`time\` ("5 hours ago", "Wednesday"), \`saved\`, \`liked\`, \`likeCount\`, \`comments\`, \`commentCount\`, \`alsoBevdBy\`, \`alsoBevdCount\`, \`onLike\`, \`onComment\`, \`onRank\`, \`onSave\`, \`onOpen\`, and in Explore \`following\` and \`onFollow\`, and on other people's posts \`onMore\` and \`moreLabel\`.
 - **Head.** Avatar 44, then the sentence in \`heading\` (17pt) with the names bold and the verb regular, and under it one meta line: the category icon, the brand (the category's name when there's no brand) and the time, "Starbucks · 2 days ago". No price on a post (D-06).
 - **Body.** The Bev's own picture is a 112pt tile on the left with the note beside it in \`bodyLarge\`, in the ranker's own voice and with no "Notes:" label. Under the note, "8.4 on Bevi · 41 ratings" in \`caption\` (the Bev's \`bayesScore\` and \`ratingCount\`), so the ranker's score has something to be read against; it is left out until the Bev has a Bayesian score. A note of more than about four lines truncates with "See more".
 - **With the ranker's own photos** (\`photos\`) the 155pt strip scrolls sideways as before and the note follows under it.
@@ -140,6 +157,7 @@ const R = {
 - **Action row.** On the left what you say to your friend, the LikeButton and the CommentButton; on the right what you do for yourself, Rank it and Want to Try. Each shows only with its handler: no \`onLike\` means no heart and no double-tap, no \`onComment\` no comment icon, and likewise Rank it and Want to Try. With no handler at all there is no row.
 - **The plain post** is a read-only ranking by someone you don't follow (Explore, and a stranger's Profile › Activity): head, body and the "Bev'd it too" line, with no heart, no counts, no comments and no Rank it or Want to Try. With no handler at all it has no action row, so it is shorter than a feed post and ends at its body (or the "Bev'd it too" line); in Explore the Follow pill gives it a row again. Tapping the picture opens the Bev. Likes and comments stay between followers (D-15).
 - **In Explore the plain post carries the author's Follow pill** (\`onFollow\`), UserRow's pill: filled \`primary\` "Follow", outlined "Following" once tapped, its accessible name "Follow" plus the author's name. It leads the action row, where the heart sits on a feed post, and pops when it is toggled.
+- **More actions.** \`onMore\` adds an ellipsis IconButton (\`ellipsis\`, 44pt target) at the end of the head, after the ScoreBubble, for Report post and Block account. Its accessible name is \`moreLabel\`, which says whose post it is: "More actions, post by @friend_a". Without \`onMore\` there is no control, so leave it off your own posts, which have nothing to report.
 - A post is always a ranking. Saving a Bev is not a post; the filled bookmark shows you already have it saved.
 - **Double-tap anywhere on the post outside the picture to like it**, Instagram-style. It only ever likes, never unlikes (the heart does that), and it is never the only way to like. A single tap on the picture still opens the Bev, so the picture ignores double-taps. The post sets \`touch-action: manipulation\` so Safari doesn't zoom on a double-tap.
 - The burst: a 88pt filled \`primary\` heart grows over the picture (the post's centre when there is none), holds and fades within 800ms, transform and opacity only. Reduce Motion: a plain fade. It plays on every like by double-tap, even when the post was already liked.
@@ -199,6 +217,14 @@ const R = {
 - \`context\` adds a third line in \`caption\` with a 14pt \`users\` icon: "Followed by Sam and Arjun", so following a suggested person is a decision with something behind it. The row is 72pt with it, 64pt without.
 - Pin your own row at the bottom of the ranking when it's off screen.
 - The pill pops when it is toggled, like the heart; the row itself gives way a little under a press.`,
+  NotificationRow: `One line of the Notifications screen: who did it, what they did and how long ago, ending in the post's Bev or a Follow back pill.
+
+- Provide: \`kind\` (follow, like or comment), \`actors\` (newest first), \`time\` as a short age ("2m", "3d", "2w"), and for a like or a comment the post's \`bev\`; a comment also takes its text in \`comment\`, quoted on up to two lines.
+- Likes on one post share a row: pass the two latest people in \`actors\` and the total in \`actorCount\`, and it reads "priya, samo and 3 others liked your Diet Coke" beside a pair of 32pt avatars. Comments and follows are one row each.
+- People are named by handle, in semibold; so is the Bev. The sentence is \`body\`, sentence case, with no full stop.
+- \`unread\` tints the row \`primaryTint\` and adds a 6pt \`primary\` dot in the gutter. Colour is never the only signal: the spoken sentence starts with "Unread.", and unread rows sit under a "New" SectionHeader.
+- A follow row ends in the pill: "Follow back" (filled) until you follow them, then "Following" (outlined). It pops when toggled, like every Follow pill.
+- The row opens the post for a like, the post with its comments up for a comment, and the person's profile for a follow. The pill is its own target.`,
   BucketButton: `Gut-check choice in the ranking flow: a \`primary\` ring filled to a level, over its label. Loved is full, fine is half, disliked is empty, so the order reads without colour.
 
 - Provide: \`bucket\` (loved, fine, disliked), \`selected\`, \`dimmed\`, \`onClick\`. Always show all three in one row of three equal columns on the 16pt gutter, under a centred "How was it?", worst to best from the left: disliked, fine, loved. The ring fills up along the row and "Loved it" sits on the right, where a scale's best end is expected.
@@ -221,21 +247,34 @@ const R = {
 
 - Provide: \`title\` and \`message\` that say what happened and what to do, \`icon\` (wifi-off for \`network\`), \`onRetry\`.
 - No apologies, no codes in the copy.`,
+  Switch: `An on/off switch for one setting: \`primary\` when on, \`borderStrong\` when off, with a \`surface\` knob.
+
+- Provide: \`checked\`, \`onChange(checked)\`, and \`label\`, its accessible name (the row's label: "Likes").
+- It sits at the end of a settings row whose label says what it controls. State is never colour alone: the knob moves, and it is announced as a switch, on or off.
+- In the app it is the platform's own switch, tinted with these tokens.`,
   Skeleton: `Loading placeholder in the shape of the final layout; every list loads with this, never a bare spinner.
 
 - Provide: \`variant\` (row, post, text, block, circle), and sizes for the plain shapes. The shimmer stops under reduced motion.
 - \`row\` is the 94pt BevRow and \`post\` the FeedPost (an Avatar 44, then a 112pt tile beside two lines).
 - The content that replaces it arrives: it rises 6pt and fades in over \`base\` (a plain fade under Reduce Motion).`,
-  Sheet: `Bottom sheet with a handle, over a \`scrim\`; snaps to 40% or 90% of the screen.
+  Sheet: `Bottom sheet with a handle, over a \`scrim\`; snaps to 40%, 60% or 90% of the screen.
 
-- Provide: \`title\`, \`snap\`, \`onClose\`, children (option rows 48pt with 1pt dividers, a check in \`primary\` on the chosen one).
+- Provide: \`title\`, \`snap\`, \`onClose\`, optional \`onClosed\` and \`expand\`, children (option rows 48pt with 1pt dividers, a check in \`primary\` on the chosen one).
+- **Dragging it.** The handle and the title are the grab area: the sheet follows the finger, and the scrim fades as it goes down. Letting go is judged by where the release was heading, not by where the finger lifted: a list flicked at that speed would coast so far, and the sheet goes to the resting place nearest to that point, closing once it is heading more than about a third of the way to the bottom edge. So a quick flick closes it however short, and a small slow drag goes back. It carries on at the finger's own speed and settles without a wobble; pulled above its top it only gives a little.
+- **\`expand\`** gives it a second resting height, the whole screen below the status bar. It opens at \`snap\`; its top drags up to the whole screen and back; from the whole screen a quick swipe down closes it outright and a slower one stops at \`snap\`. It takes the whole screen by itself while the keyboard is up. What is pinned to its bottom (a composer) stays on the bottom edge of the screen at either height and all the way between them. For a sheet people stay in: the CommentsSheet. Option sheets do not expand.
 - Uses: list scope, filters, re-rank, category picker, report a Bev, settings.
+- \`onClosed\` fires once the sheet has finished closing, after its exit animation and, on a phone, once the modal is really gone. Anything that follows a close (leaving the screen, opening a screen or another modal) waits for it: doing it in the same tick as \`onClose\` pops or pushes a screen under a modal that is still presented.
+- A sheet that opens over another goes inside it (the second modal presents from the first); never beside it.
 - It fills its nearest positioned ancestor: render it inside the screen container.`,
-  CommentsSheet: `The post's comments, Instagram-clean, in a 90% Sheet titled "Comments".
+  CommentsSheet: `The post's comments, Instagram-clean, in a Sheet titled "Comments" that opens at 60% of the screen, a little above the middle, and expands to the whole screen (Sheet's \`expand\`).
 
-- Provide: \`comments\` (each \`author\`, \`body\`, \`time\`, \`mine\`), \`me\` (the composer's avatar), \`onPost\`, \`onDelete\`, \`onClose\`, optional \`error\`.
+- **Getting in and out.** It opens at 60% with the post still in view above it. Drag its top up for the whole screen; swipe down to close. On a phone the thread moves the sheet too: a drag down while it shows its first comment, and a drag up while the sheet is at 60%. The composer stays on the bottom edge of the screen throughout, and the sheet takes the whole screen while the keyboard is up.
+
+- Provide: \`comments\` (each \`author\`, \`body\`, \`time\`, \`mine\`), \`me\` (the composer's avatar), \`onPost\`, \`onDelete\`, \`onClose\`, optional \`onMore\`, \`error\` and children.
+- **A sheet over this one.** Pass the More menu's sheet as children, so it sits inside the CommentsSheet and not beside it. On a phone every Sheet is a modal that presents from the nearest screen, and a second one beside the first is refused; one inside it presents from the first. Anything else that opens over a Sheet follows the same rule.
 - Order: oldest at the top, newest just above the composer, like a chat, and the same order as the post's inline comments. \`comments.list\` returns newest first, so the app reverses each page and loads older ones as you scroll up.
 - A comment: Avatar 32, the bold handle and a relative time in \`textSecondary\` ("2 hours ago"), then the text in \`body\`, wrapped. Your own comments end in a "Delete" text button (44pt target, \`textSecondary\`, removed after a confirm in the app). No likes on comments.
+- **More actions.** With \`onMore\`, a comment that is not yours ends in an ellipsis IconButton (\`ellipsis\`, 24pt glyph, 44pt target) named "More actions, comment by @handle", which opens its menu (Report comment, Block account). Your own comments keep Delete and never show it. Without \`onMore\` no row has one.
 - Empty: an EmptyState with \`message-circle\`, "No comments yet" and "Start the conversation."
 - The composer is pinned to the bottom: your Avatar 32, a pill field "Add a comment…" (\`borderStrong\`, focus ring), and **Post** in \`primary\`, \`textSecondary\` and disabled while the field is empty. A comment is at most 280 characters: the remaining count appears beside Post from 20 left, and turns \`scoreLow\` and blocks Post below zero.
 - When posting fails the draft stays and a \`scoreLow\` caption under the composer says why ("Couldn't post your comment. Check your connection and try again.", "… Wait a minute, then try again.").`,
@@ -290,9 +329,9 @@ const R = {
 };
 
 const S = {
-  ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then SegmentedTabs "Your feed · Explore" and that segment's FeedPosts, over the TabBar.
+  ScreenFeed: `Feed tab (ref 01, 12): Header with the wordmark, the bell and Find people, the filled SearchBar, Bev of the day and Bev of the week side by side (BevOfCard), then SegmentedTabs "Your feed · Explore" and that segment's FeedPosts, over the TabBar.
 
-- The person-plus icon in the Header opens People. The search bar is a doorway to Add Bev, which opens with its bar focused.
+- The bell in the Header opens Notifications and carries the unread count; it shows no badge at 0. The person-plus icon opens People. The search bar is a doorway to Add Bev, which opens with its bar focused.
 - The same Bev winning the day and the week shows as two cards, one per period: never merged into one, which leaves half the row empty and reads as a winner that failed to load.
 - The tabs replace the YOUR FEED section header, in the same place: under the Bev of the day and week, which stay on both segments. Text tabs (\`underline-text\`), as on Lists. "Your feed" is the default.
 - **Your feed:** followed people's rankings, newest first. Each post carries the heart and the comment bubble on the left of its action row and Rank it and Want to Try on the right; up to seven comments show under the row, more collapse to "View all N comments". Following nobody: an EmptyState under the tabs ("Follow friends to see their Bevs" + Find people, which opens People).
@@ -318,6 +357,27 @@ const S = {
 - People are searched from here too, but suggestions for whom to follow live on People.
 - No wordmark and no close circle: this is a tab, so there is nothing to close.
 - "Can't find it? Add a new Bev" stays pinned to the bottom, as while typing (ScreenSearchResults).`,
+  ScreenNotifications: `Notifications (pushed from the Feed header's bell): Header with Back and "Notifications", then NotificationRows under "NEW", "TODAY", "THIS WEEK" and "EARLIER", over the TabBar with Feed marked.
+
+- **What is listed:** someone followed you, liked a Bev you posted, or commented on it. Likes on one post are one row. Nothing else lands here.
+- **Sections:** "New" holds everything unread. Read rows fall under "Today", "This week" (the last seven days) or "Earlier". A section with no rows is not drawn.
+- **Reading:** opening the screen marks everything read and clears the bell's count at once. The rows keep their tint until you leave, so you can see what was new.
+- **Going away:** a row disappears when what it reports is no longer true (they unfollowed, took the like back or deleted the comment), when the post is gone, and when either of you has blocked the other.
+- **Empty:** EmptyState with the bell, "No notifications yet", and Find people, which opens People.
+- Loading shows Skeleton rows; a failure shows ErrorState with Retry. Pull down to refresh.
+- On a build that can receive notifications, a gear in the Header opens Settings, Notifications.`,
+  ScreenNotificationSettings: `Settings, Notifications (from Settings, and from the gear in the Notifications Header): what Bevi may send to this phone. One Switch pauses everything, one per kind, and Posts has a list of people.
+
+- **Pause all** on shows every kind off and sends nothing. Off, each kind is back exactly as it was: pausing never changes the kinds themselves. Switching one kind on while paused ends the pause with only that kind on.
+- **Tell me about:** New followers, Likes and Comments start on. Posts starts off.
+- **Posts:** a notification when someone you chose posts a Bev. "Choose people" opens Post notifications: the people you follow, each with a Switch, and search. Switching a person on turns Posts on. It is sent for a new Bev only: never for a re-rank, and never for the likes and comments those people get. Unfollowing someone removes them.
+- These control what is sent to the phone only. Follows, likes and comments still show in Notifications whatever is switched off; post notifications add nothing there.
+- If the phone's own Settings have notifications off for Bevi, the screen says so above the switches and offers to open them.
+- The screen and its row in Settings exist only on a build that can receive notifications.`,
+  ScreenNotificationsAsk: `The ask before the iOS permission prompt: a Sheet over Notifications with the bell, "Hear about it when it happens", one line of what will be sent, a \`primary\` Button "Turn on notifications" and a ghost "Not now".
+
+- Shown once, the first time Notifications is opened with something in it. Never at launch.
+- "Turn on notifications" leads to the iOS prompt. "Not now" closes it, and it does not come back on its own: Settings, Notifications offers it again.`,
   ScreenPeople: `People (pushed from the Feed header's person-plus icon): Header with Back and "People", the filled SearchBar "Search people", "SUGGESTED FOR YOU", then "RANKED BY POINTS".
 
 - **Search** replaces the sections with matching people (UserRows with Follow). Your own profile is never listed.
@@ -349,6 +409,7 @@ const S = {
 
 - Each thing is said once: the rank lives in its StatCard, not in the counts row as well, and the Bev'd count opens the Bev'd list, so there is no Bev'd row repeating the number.
 - Two buttons fill the row. Settings is the menu in the Header; there is no third button for it.
+- Tapping the photo opens it full screen as a large circle that grows out of the Avatar, on your own profile and on another person's; Close or a swipe down sends it back. Initials are not tappable.
 - Another person's profile keeps the same order, with Follow where your own has Edit profile.`,
 };
 

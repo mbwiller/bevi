@@ -16,10 +16,12 @@ import {
 import { isApiError, type Bucket, type Session } from '@bevi/shared';
 
 import { CATALOG_BEVS } from '../catalog';
-import { STORAGE_KEY, type StorageLike } from '../db';
-import { buildFixtures } from '../fixtures';
+import { controls } from '../controls';
+import { STORAGE_KEY, type FakeDb, type StorageLike } from '../db';
+import { buildFixtures, userIdFor } from '../fixtures';
 import { FakeApi } from '../FakeApi';
-import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE, FRIEND, ME } from '../people';
+import { getFakeApi } from '../instance';
+import { ALCOHOLIC_BEV_ID, FAKE_INVITE_CODE, FRIEND, ME, MINOR } from '../people';
 
 const memoryStorage = (): StorageLike & { data: Map<string, string> } => {
   const data = new Map<string, string>();
@@ -96,8 +98,21 @@ describe('fixtures through the API', () => {
     expect((await api.categories.list()).some((c) => c.isAlcoholic)).toBe(false);
     expect((await api.feed.getFeatured()).map((f) => f.bev.id)).not.toContain(ALCOHOLIC_BEV_ID);
     expect((await api.bevs.search({ q: '', limit: 100 })).items.map((b) => b.id)).not.toContain(ALCOHOLIC_BEV_ID);
-    expect((await api.bevs.getStarterCandidates()).length).toBeGreaterThanOrEqual(30);
+    const minorStarters = await api.bevs.getStarterCandidates();
+    expect(minorStarters.length).toBeGreaterThanOrEqual(30);
+    expect(minorStarters.filter((b) => ['beer', 'wine', 'spirits_cocktails'].includes(b.categoryId))).toEqual([]);
     await expect(api.bevs.get(ALCOHOLIC_BEV_ID)).rejects.toMatchObject({ code: 'age_restricted' });
+  });
+
+  it('an adult is offered at least four starters in each category onboarding draws from, alcoholic ones included', async () => {
+    const api = make();
+    await signInMe(api);
+    expect((await api.profile.getMe()).canSeeAlcohol).toBe(true);
+    const perCategory = new Map<string, number>();
+    for (const b of await api.bevs.getStarterCandidates()) perCategory.set(b.categoryId, (perCategory.get(b.categoryId) ?? 0) + 1);
+    for (const id of ['beer', 'wine', 'spirits_cocktails', 'coffee', 'tea', 'juice', 'sports', 'water', 'boba', 'smoothie']) {
+      expect(perCategory.get(id) ?? 0).toBeGreaterThanOrEqual(4);
+    }
   });
 
   it('bevs.create rejects a photo that is still processing (validation), then accepts it once ready', async () => {
@@ -221,6 +236,65 @@ describe('dev controls', () => {
       .submitRanking({ bevId: 'pepsi', bucket: 'LOVED', insertIndex: 0, expectedBucketSize: 0, comparisons: [] })
       .catch((e: unknown) => e);
     expect(isApiError(err) && err.code).toBe('conflict');
+  });
+
+  it('getAppConfig answers the default config signed out, with both IA-2 fields', async () => {
+    const api = make();
+    expect(await api.getSession()).toBeNull();
+    expect(await api.meta.getAppConfig()).toEqual({
+      minAppVersion: '0.1.0',
+      minContractVersion: '0.0.0',
+      maintenance: false,
+      maintenanceMessage: null,
+    });
+  });
+
+  it('setAppConfig replaces only the fields given, and resetToFixtures puts the default back', async () => {
+    const api = make();
+    const initial = await api.meta.getAppConfig();
+
+    api.setAppConfig({ maintenance: true, maintenanceMessage: 'Back by 9pm ET.' });
+    expect(await api.meta.getAppConfig()).toEqual({ ...initial, maintenance: true, maintenanceMessage: 'Back by 9pm ET.' });
+
+    api.setAppConfig({ minAppVersion: '9.0.0', minContractVersion: '3.2.0' });
+    expect(await api.meta.getAppConfig()).toEqual({
+      minAppVersion: '9.0.0',
+      minContractVersion: '3.2.0',
+      maintenance: true,
+      maintenanceMessage: 'Back by 9pm ET.',
+    });
+
+    api.resetToFixtures();
+    expect(await api.meta.getAppConfig()).toEqual(initial);
+  });
+
+  it('setAppConfig refuses what the app_config table refuses, and leaves the config as it was', async () => {
+    const api = make();
+    const initial = await api.meta.getAppConfig();
+    expect(() => api.setAppConfig({ minAppVersion: '1.2' })).toThrow('minAppVersion must be x.y.z');
+    expect(() => api.setAppConfig({ minContractVersion: 'v3.2.0' })).toThrow('minContractVersion must be x.y.z');
+    expect(() => api.setAppConfig({ maintenanceMessage: '' })).toThrow('maintenanceMessage');
+    expect(() => api.setAppConfig({ maintenanceMessage: 'x'.repeat(281) })).toThrow('maintenanceMessage');
+    expect(await api.meta.getAppConfig()).toEqual(initial);
+  });
+
+  it("failNext accepts 'meta.getAppConfig', failing that read once and nothing else", async () => {
+    const api = make();
+    api.failNext('network', 'meta.getAppConfig');
+    await expect(api.profile.checkHandle('someone_new')).resolves.toEqual({ available: true });
+    await expect(api.meta.getAppConfig()).rejects.toMatchObject({ code: 'network' });
+    await expect(api.meta.getAppConfig()).resolves.toMatchObject({ maintenance: false });
+  });
+
+  it("controls.setAppConfig drives the suites' shared FakeApi", async () => {
+    controls.setLatency(0);
+    controls.resetToFixtures();
+    controls.setAppConfig({ maintenance: true });
+    expect((await getFakeApi().meta.getAppConfig()).maintenance).toBe(true);
+    controls.failNext('unknown', 'meta.getAppConfig');
+    await expect(getFakeApi().meta.getAppConfig()).rejects.toMatchObject({ code: 'unknown' });
+    controls.resetToFixtures();
+    expect((await getFakeApi().meta.getAppConfig()).maintenance).toBe(false);
   });
 
   it('setLatency delays calls', async () => {
@@ -358,6 +432,81 @@ describe('@bevi/ranking-backed predictions, recommendations, streaks and points'
     }
     // The seed plants streaks (the test user ranked today and yesterday).
     expect((await api.stats.getMine()).currentStreak).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('rankings made before onboarding ends (DELIVERABLE-44)', () => {
+  const rankFirst = (api: FakeApi, bevId: string, bucket: Bucket) =>
+    api.rankings.submitRanking({ bevId, bucket, insertIndex: 0, expectedBucketSize: 0, comparisons: [] });
+
+  it('are saved, counted and kept in the streak, but post nothing, even to a follower', async () => {
+    const api = make();
+    const fan = await api.signUp({ username: 'starterfan', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    const me = await api.signUp({ username: 'starter', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    expect((await api.profile.getMe()).onboarded).toBe(false);
+    const [a, b] = (await api.bevs.getStarterCandidates()).map((x) => x.id);
+    await rankFirst(api, a!, 'LOVED');
+    await rankFirst(api, b!, 'FINE');
+
+    expect((await api.rankings.listMine()).items.map((r) => r.bevId).sort()).toEqual([a, b].sort());
+    expect(await api.stats.getMine()).toMatchObject({ bevdCount: 2, currentStreak: 1, streakAliveToday: true });
+    expect((await api.feed.getFeed()).items.filter((i) => i.actor.id === me.userId)).toEqual([]);
+    expect((await api.feed.listUser(me.userId)).items).toEqual([]);
+
+    // Removed again, the day still counts, as the server's ranking_events keep it.
+    await api.rankings.removeRanking(b!);
+    expect(await api.stats.getMine()).toMatchObject({ bevdCount: 1, currentStreak: 1, streakAliveToday: true });
+
+    await api.signOut();
+    await api.signIn({ username: 'starterfan', password: 'password1' });
+    expect(fan.userId).not.toBe(me.userId);
+    await api.follows.follow(me.userId);
+    expect((await api.feed.getFeed()).items.filter((i) => i.actor.id === me.userId)).toEqual([]);
+    expect((await api.feed.listUser(me.userId)).items).toEqual([]);
+    expect((await api.rankings.listUser(me.userId)).items.map((r) => r.bevId)).toEqual([a]);
+  });
+
+  it('queue no post push for a subscriber until the profile is onboarded', async () => {
+    const api = make();
+    const fan = await api.signUp({ username: 'pushfan', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    const me = await api.signUp({ username: 'pushstarter', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    await api.signOut();
+    await api.signIn({ username: 'pushfan', password: 'password1' });
+    await api.follows.follow(me.userId);
+    await api.notifications.updateSettings({ paused: false, follows: true, likes: true, comments: true, posts: true });
+    await api.notifications.setPostNotification(me.userId, true);
+    await api.signOut();
+
+    await api.signIn({ username: 'pushstarter', password: 'password1' });
+    const [a, b] = (await api.bevs.getStarterCandidates()).map((x) => x.id);
+    await rankFirst(api, a!, 'LOVED');
+    expect(api.pendingPushes(fan.userId)).toEqual([]);
+
+    await api.profile.updateMe({ onboarded: true });
+    await rankFirst(api, b!, 'FINE');
+    const post = (await api.feed.listUser(me.userId)).items[0]!;
+    expect(api.pendingPushes(fan.userId)).toEqual([{ kind: 'post', actorHandle: 'pushstarter', postId: post.id }]);
+  });
+
+  it('once the profile is onboarded, the next ranking posts; an onboarded fixture user posts as before', async () => {
+    const api = make();
+    const me = await api.signUp({ username: 'graduate', password: 'password1', inviteCode: FAKE_INVITE_CODE });
+    const [a, b] = (await api.bevs.getStarterCandidates()).map((x) => x.id);
+    await rankFirst(api, a!, 'LOVED');
+    await api.profile.updateMe({ onboarded: true });
+    await rankFirst(api, b!, 'FINE');
+    expect((await api.feed.listUser(me.userId)).items.map((i) => i.bev.id)).toEqual([b]);
+
+    await api.signOut();
+    await signInMe(api);
+    expect((await api.profile.getMe()).onboarded).toBe(true);
+    const mine = new Set((await Promise.all(BUCKET_ORDER.map((bucket) => api.rankings.listBucket(bucket)))).flat());
+    const fresh = (await api.bevs.getStarterCandidates()).map((x) => x.id).find((id) => !mine.has(id))!;
+    const fine = await api.rankings.listBucket('FINE');
+    const comparisons = fine.length ? [{ winnerBevId: fine[fine.length - 1]!, loserBevId: fresh, tie: false }] : [];
+    await api.rankings.submitRanking({ bevId: fresh, bucket: 'FINE', insertIndex: fine.length, expectedBucketSize: fine.length, comparisons });
+    const post = (await api.feed.getFeed()).items.find((i) => i.bev.id === fresh && i.actor.handle === ME.handle);
+    expect(post).toMatchObject({ type: 'RANKING', bucket: 'FINE' });
   });
 });
 
@@ -532,7 +681,12 @@ describe('feed.listUser (S-20)', () => {
 
 describe('feed.getExplore (S-04 + A-04)', () => {
   const PW = 'explore-pass-1';
-  const join = (api: FakeApi, username: string) => api.signUp({ username, password: PW, inviteCode: FAKE_INVITE_CODE });
+  /** Signs up and finishes onboarding: a ranking made before that is not a post (DELIVERABLE-44). */
+  const join = async (api: FakeApi, username: string) => {
+    const session = await api.signUp({ username, password: PW, inviteCode: FAKE_INVITE_CODE });
+    await api.profile.updateMe({ onboarded: true });
+    return session;
+  };
   /** Two non-alcoholic Bevs: a fresh signup has no birthdate, so search already hides alcohol. */
   const twoBevs = async (api: FakeApi) => (await api.bevs.search({ q: '', limit: 2 })).items.map((b) => b.id);
   const rankFirstIn = (api: FakeApi, bevId: string, bucket: Bucket) =>
@@ -573,9 +727,10 @@ describe('feed.getExplore (S-04 + A-04)', () => {
     expect(explore.items.some((i) => i.actor.id === middle.userId)).toBe(false); // never a followee
     expect(explore.items.some((i) => i.actor.id === hop3.userId)).toBe(false); // three hops is too far
 
-    // D-15: a read-only post, so no heart, no counts and no comments can be rendered.
+    // D-15: a read-only post, so no heart, no counts and no comments can be rendered. `venue`
+    // (3.5.0) is where the Bev was had: part of the post, not engagement with it.
     expect(Object.keys(explore.items[0]!).sort()).toEqual(
-      ['actor', 'bev', 'bucket', 'createdAt', 'id', 'inMyWantToTry', 'note', 'score', 'type'].sort(),
+      ['actor', 'bev', 'bucket', 'createdAt', 'id', 'inMyWantToTry', 'note', 'score', 'type', 'venue'].sort(),
     );
   });
 
@@ -738,9 +893,9 @@ describe('label-read nutrition', () => {
   const clock = { now: new Date('2026-10-11T12:00:00Z') };
   const field = (f: string) => ({ code: 'validation', detail: { field: f } });
 
-  it('has no server-side label reader: the nutrition capability is the barcode lookup only', () => {
+  it('has no server-side label reader: the nutrition capability is the barcode lookups only', () => {
     const api = new FakeApi({ storage: null, latency: 0, now: () => clock.now });
-    expect(Object.keys(api.nutrition)).toEqual(['lookupBarcode']);
+    expect(Object.keys(api.nutrition).sort()).toEqual(['lookupBarcode', 'lookupProduct']);
   });
 
   it('stores a label read with its source, and a barcode snapshot defaults to openfoodfacts', async () => {
@@ -775,5 +930,482 @@ describe('label-read nutrition', () => {
     await expect(create({ ...barcodeSnapshot, source: 'openfoodfacts', sourceUrl: null })).rejects.toMatchObject(field('nutrition'));
     await expect(create({ ...barcodeSnapshot, sourceUrl: 'https://example.com/x' })).rejects.toMatchObject(field('nutrition'));
     await expect(create({ ...reading, source: 'something-else' })).rejects.toMatchObject(field('nutrition'));
+  });
+});
+
+// IS-7: block_user / list_blocked_users / report_content, and the filtering a block causes.
+describe('blocks and reports', () => {
+  const friendId = userIdFor(FRIEND.handle);
+
+  async function setup() {
+    const api = make();
+    const me = await signInMe(api);
+    const feed = (await api.feed.getFeed({ limit: 100 })).items;
+    const friendPost = feed.find((i) => i.actor.id === friendId)!;
+    const myPost = feed.find((i) => i.actor.id === me.userId)!;
+    expect(friendPost).toBeDefined();
+    expect(myPost).toBeDefined();
+    return { api, me, friendPost, myPost };
+  }
+
+  it('a block is mutual in effect: each reads the other as not_found, and the follows go both ways', async () => {
+    const { api, me, friendPost } = await setup();
+    await api.blocks.block(friendId);
+    await api.blocks.block(friendId); // idempotent
+
+    await expect(api.profile.getUser(friendId)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(api.feed.listUser(friendId)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(api.follows.follow(friendId)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(api.comments.list(friendPost.id)).rejects.toMatchObject({ code: 'not_found' });
+    expect((await api.feed.getFeed({ limit: 100 })).items.some((i) => i.actor.id === friendId)).toBe(false);
+    expect((await api.profile.searchUsers({ q: FRIEND.handle })).items).toEqual([]);
+    expect((await api.follows.listFollowing(me.userId, { limit: 50 })).items.some((p) => p.id === friendId)).toBe(false);
+
+    // The other side sees the same wall, and nothing tells them they were blocked.
+    api.signInAs(FRIEND.handle);
+    await expect(api.profile.getUser(me.userId)).rejects.toMatchObject({ code: 'not_found' });
+    expect((await api.follows.listFollowing(friendId, { limit: 50 })).items.some((p) => p.id === me.userId)).toBe(false);
+    expect((await api.blocks.list()).items).toEqual([]);
+  });
+
+  it("list shows only the caller's own blocks; unblock does not restore the follows", async () => {
+    const { api, me } = await setup();
+    await api.blocks.block(friendId);
+    expect((await api.blocks.list()).items).toEqual([
+      expect.objectContaining({ id: friendId, handle: FRIEND.handle, birthdate: null, canSeeAlcohol: false, blockedAt: expect.any(String) }),
+    ]);
+
+    await api.blocks.unblock(friendId);
+    await api.blocks.unblock(friendId); // idempotent
+    expect((await api.blocks.list()).items).toEqual([]);
+    expect((await api.profile.getUser(friendId)).isFollowing).toBe(false);
+    expect((await api.follows.listFollowing(me.userId, { limit: 50 })).items.some((p) => p.id === friendId)).toBe(false);
+  });
+
+  it('refuses a self-block as validation and an unknown user as not_found', async () => {
+    const { api, me } = await setup();
+    await expect(api.blocks.block(me.userId)).rejects.toMatchObject({ code: 'validation' });
+    await expect(api.blocks.block('no-such-user')).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it('report is idempotent per content and validates as report_content does', async () => {
+    const { api, me, friendPost } = await setup();
+    const first = await api.reports.report({ kind: 'post', id: friendPost.id, reason: 'spam' });
+    const again = await api.reports.report({ kind: 'post', id: friendPost.id, reason: 'hate', note: 'different' });
+    expect(again).toEqual(first);
+    const profile = await api.reports.report({ kind: 'profile', id: friendId, reason: 'harassment' });
+    expect(profile.reportId).not.toBe(first.reportId);
+
+    await expect(api.reports.report({ kind: 'profile', id: me.userId, reason: 'spam' })).rejects.toMatchObject({ code: 'validation' });
+    await expect(api.reports.report({ kind: 'post', id: friendPost.id, reason: 'nope' as never })).rejects.toMatchObject({
+      code: 'validation',
+      detail: { field: 'reason' },
+    });
+    await expect(
+      api.reports.report({ kind: 'profile', id: friendId, reason: 'spam', note: 'x'.repeat(501) }),
+    ).rejects.toMatchObject({ code: 'validation', detail: { field: 'note' } });
+    await expect(api.reports.report({ kind: 'post', id: 'no-such-post', reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it('Block then Report works for the blocker, and the blocked person cannot report back', async () => {
+    const { api, friendPost, myPost } = await setup();
+    await api.blocks.block(friendId);
+    await expect(api.reports.report({ kind: 'post', id: friendPost.id, reason: 'harassment' })).resolves.toEqual({
+      reportId: expect.any(String),
+    });
+
+    api.signInAs(FRIEND.handle);
+    await expect(api.reports.report({ kind: 'post', id: myPost.id, reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it("a stranger's Explore post is reportable, until its author blocks the caller", async () => {
+    const { api, me } = await setup();
+    const explore = (await api.feed.getExplore({ limit: 100 })).items;
+    const first = explore[0]!;
+    const other = explore.find((p) => p.actor.id !== first.actor.id)!;
+    expect(first).toBeDefined();
+    expect(other).toBeDefined();
+    // A stranger's post: the feed's rule alone would say not_found.
+    await expect(api.comments.list(first.id)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(api.reports.report({ kind: 'post', id: first.id, reason: 'spam' })).resolves.toEqual({ reportId: expect.any(String) });
+
+    // The author of another Explore post blocks the caller: it reads as missing, Explore or not.
+    api.signInAs(other.actor.handle);
+    await api.blocks.block(me.userId);
+    api.signInAs(ME.handle);
+    expect((await api.feed.getExplore({ limit: 100 })).items.some((p) => p.id === other.id)).toBe(false);
+    await expect(api.reports.report({ kind: 'post', id: other.id, reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
+  });
+
+  it('a comment by someone who blocked the caller is not reportable, though its post is visible', async () => {
+    const { api, me, friendPost } = await setup();
+    api.signInAs('friend_b');
+    const comment = await api.comments.add(friendPost.id, 'friend_b on friend_a');
+    await api.blocks.block(me.userId);
+    api.signInAs(ME.handle);
+    await expect(api.comments.list(friendPost.id)).resolves.toMatchObject({ items: expect.not.arrayContaining([expect.objectContaining({ id: comment.id })]) });
+    await expect(api.reports.report({ kind: 'comment', id: comment.id, reason: 'spam' })).rejects.toMatchObject({ code: 'not_found' });
+  });
+});
+
+// DELIVERABLE-44: go-to categories, with set_category_picks' rules (20261128000200).
+describe('category picks', () => {
+  it('is [] until set; set returns and reads back favourite first; replace and clear', async () => {
+    const api = make();
+    await signInMe(api);
+    expect(await api.profile.getCategoryPicks()).toEqual([]);
+
+    expect(await api.profile.setCategoryPicks(['coffee', 'soda', 'tea'])).toEqual(['coffee', 'soda', 'tea']);
+    expect(await api.profile.getCategoryPicks()).toEqual(['coffee', 'soda', 'tea']);
+
+    expect(await api.profile.setCategoryPicks(['tea', 'coffee'])).toEqual(['tea', 'coffee']);
+    expect(await api.profile.getCategoryPicks()).toEqual(['tea', 'coffee']);
+
+    expect(await api.profile.setCategoryPicks([])).toEqual([]);
+    expect(await api.profile.getCategoryPicks()).toEqual([]);
+  });
+
+  it('refuses too many, a repeat, a leaf and an unknown id on categoryIds, and saves nothing', async () => {
+    const api = make();
+    await signInMe(api);
+    await api.profile.setCategoryPicks(['water']);
+    const refused = { code: 'validation', detail: { field: 'categoryIds' } };
+    await expect(api.profile.setCategoryPicks(['soda', 'juice', 'tea', 'coffee'])).rejects.toMatchObject(refused);
+    await expect(api.profile.setCategoryPicks(['soda', 'soda'])).rejects.toMatchObject(refused);
+    await expect(api.profile.setCategoryPicks(['cola' as never])).rejects.toMatchObject(refused);
+    await expect(api.profile.setCategoryPicks(['no_such_category' as never])).rejects.toMatchObject(refused);
+    expect(await api.profile.getCategoryPicks()).toEqual(['water']);
+  });
+
+  it('an alcoholic category is age_restricted when the caller cannot see alcohol, and fine at 21+', async () => {
+    const api = make();
+    api.signInAs(MINOR.handle);
+    await expect(api.profile.setCategoryPicks(['beer'])).rejects.toMatchObject({ code: 'age_restricted' });
+    await expect(api.profile.setCategoryPicks(['soda', 'wine'])).rejects.toMatchObject({ code: 'age_restricted' });
+    // Validation first, as in the RPC: a leaf under beer is the wrong id, not a restricted one.
+    await expect(api.profile.setCategoryPicks(['lager' as never])).rejects.toMatchObject({ code: 'validation' });
+    expect(await api.profile.getCategoryPicks()).toEqual([]);
+    expect(await api.profile.setCategoryPicks(['boba', 'energy'])).toEqual(['boba', 'energy']);
+
+    api.signInAs(ME.handle);
+    expect(await api.profile.setCategoryPicks(['beer', 'wine', 'spirits_cocktails'])).toEqual(['beer', 'wine', 'spirits_cocktails']);
+  });
+
+  it("are private: another user reads only their own, and signed out is unauthorized", async () => {
+    const api = make();
+    await signInMe(api);
+    await api.profile.setCategoryPicks(['juice']);
+    api.signInAs(FRIEND.handle);
+    expect(await api.profile.getCategoryPicks()).toEqual([]);
+    await api.signOut();
+    await expect(api.profile.getCategoryPicks()).rejects.toMatchObject({ code: 'unauthorized' });
+    await expect(api.profile.setCategoryPicks(['soda'])).rejects.toMatchObject({ code: 'unauthorized' });
+  });
+
+  it('go with the account when it is deleted, and with a first-run reset', async () => {
+    const storage = memoryStorage();
+    const stored = () => (JSON.parse(storage.data.get(STORAGE_KEY)!) as FakeDb).categoryPicks ?? {};
+    const api = make(storage);
+    const me = await signInMe(api);
+    await api.profile.setCategoryPicks(['juice']);
+    api.emptyUser();
+    expect(await api.profile.getCategoryPicks()).toEqual([]);
+
+    await api.profile.setCategoryPicks(['tea']);
+    api.signInAs(FRIEND.handle);
+    await api.profile.setCategoryPicks(['soda']);
+    api.signInAs(ME.handle);
+    expect(stored()[me.userId]).toEqual(['tea']);
+    await api.deleteAccount();
+    expect(stored()).toEqual({ [userIdFor(FRIEND.handle)]: ['soda'] });
+  });
+});
+
+// BEV-22: the two `venues` methods the conformance suite cannot exercise, because what an outside
+// directory holds is not something a contract can promise. Here it is the fixtures' two places.
+describe('venues.searchMore and addPlace (BEV-22)', () => {
+  const NEAR = { lat: 40.7736, lng: -73.9566 };
+
+  it('searchMore finds a place Bevi does not have, with its distance from the caller', async () => {
+    const api = make();
+    await api.signIn({ username: ME.handle, password: ME.password });
+
+    expect(await api.venues.search({ query: 'bread butter' })).toEqual([]);
+    const places = await api.venues.searchMore({ query: 'bread', near: NEAR });
+    expect(places).toEqual([expect.objectContaining({ placeId: 'ext-bread-butter', name: 'Bread & Butter Market' })]);
+    expect(places[0]!.distanceMeters).toBeGreaterThan(0);
+    expect((await api.venues.searchMore({ query: 'long hall' }))[0]).toMatchObject({ placeId: 'ext-long-hall', distanceMeters: null });
+
+    await expect(api.venues.searchMore({ query: '  ' })).rejects.toMatchObject({ code: 'validation' });
+  });
+
+  it('addPlace makes a venue of it once, which search then finds and a Bev can be tagged with', async () => {
+    const api = make();
+    await api.signIn({ username: ME.handle, password: ME.password });
+
+    const venue = await api.venues.addPlace('ext-long-hall');
+    expect(venue).toMatchObject({ name: 'The Long Hall', lat: 53.3419, neighborhood: null });
+    expect((await api.venues.addPlace('ext-long-hall')).id).toBe(venue.id);
+    expect((await api.venues.search({ query: 'long hall' })).map((m) => m.venue.id)).toEqual([venue.id]);
+
+    const mine = (await api.rankings.listMine()).items[0]!;
+    await api.rankings.setVenue(mine.bev.id, venue.id);
+    expect((await api.venues.bevdMap({ scope: 'mine' })).map((p) => p.venue.name)).toContain('The Long Hall');
+
+    await expect(api.venues.addPlace('ext-nowhere')).rejects.toMatchObject({ code: 'not_found' });
+  });
+});
+
+// T-31. The conformance suite covers the inbox's behaviour on fresh accounts; these pin the fake's
+// own seeded inbox for ME and the parts only the fake has (fixture rows, controls, failNext).
+describe('notifications (T-31)', () => {
+  const id = (handle: string) => userIdFor(handle);
+
+  async function myPosts(api: FakeApi, meId: string) {
+    return (await api.feed.listUser(meId, { limit: 50 })).items;
+  }
+
+  it("seeds ME's inbox: two unread likes as one row, an unread comment and follow, three read ones", async () => {
+    const api = make();
+    const me = await signInMe(api);
+    const [newest, second] = await myPosts(api, me.userId);
+    const { items, nextCursor } = await api.notifications.list();
+    expect(nextCursor).toBeNull();
+    expect(items.map((n) => [n.kind, n.unread, n.actors.map((p) => p.handle)])).toEqual([
+      ['like', true, [FRIEND.handle, 'friend_b']],
+      ['comment', true, [FRIEND.handle]],
+      ['follow', true, ['friend_e']],
+      ['comment', false, ['friend_b']],
+      ['like', false, ['friend_d']],
+      ['follow', false, ['friend_d']],
+    ]);
+    expect(items[0]).toMatchObject({ actorCount: 2, postId: newest!.id, bev: { id: newest!.bev.id }, comment: null });
+    expect(items[1]).toMatchObject({ postId: second!.id, comment: { body: expect.any(String) } });
+    // friend_e follows ME and ME does not follow back; friend_d is followed both ways.
+    expect(items[2]!.actors[0]).toMatchObject({ id: id('friend_e'), isFollowing: false });
+    expect(items[5]!.actors[0]).toMatchObject({ id: id('friend_d'), isFollowing: true });
+    expect(items.slice(3).every((n) => Date.parse(n.createdAt) < FIXED_NOW.getTime() - 7 * 24 * 3600 * 1000)).toBe(true);
+    expect(await api.notifications.unreadCount()).toBe(3);
+    // The fixtures add no likes, comments or follows of their own: the post still reads as it did.
+    expect((await api.feed.getPost(newest!.id)).likeCount).toBe(0);
+  });
+
+  it('pages by keyset, each row once, and markRead stops at the id it is given', async () => {
+    const api = make();
+    await signInMe(api);
+    const all = (await api.notifications.list()).items;
+    const page1 = await api.notifications.list({ limit: 4 });
+    const page2 = await api.notifications.list({ limit: 4, cursor: page1.nextCursor! });
+    expect(page2.nextCursor).toBeNull();
+    expect([...page1.items, ...page2.items].map((n) => n.id)).toEqual(all.map((n) => n.id));
+
+    await api.notifications.markRead(all[2]!.id);
+    expect(await api.notifications.unreadCount()).toBe(2);
+    await api.notifications.markRead();
+    expect(await api.notifications.unreadCount()).toBe(0);
+    await expect(api.notifications.markRead('feed-1')).rejects.toMatchObject({ code: 'validation', detail: { field: 'upToId' } });
+  });
+
+  it("a friend's like and comment arrive, an unlike hides the like, and your own like notifies nobody", async () => {
+    const api = make();
+    const me = await signInMe(api);
+    const third = (await myPosts(api, me.userId))[2]!;
+    await api.feed.like(third.id);
+    expect(await api.notifications.unreadCount()).toBe(3);
+
+    api.signInAs(FRIEND.handle);
+    await api.feed.like(third.id);
+    await api.comments.add(third.id, 'from friend a');
+    api.signInAs(ME.handle);
+    const [comment, like] = (await api.notifications.list()).items;
+    expect(comment).toMatchObject({ kind: 'comment', postId: third.id, comment: { body: 'from friend a' }, unread: true });
+    expect(like).toMatchObject({ kind: 'like', postId: third.id, actorCount: 1, unread: true });
+    expect(await api.notifications.unreadCount()).toBe(5);
+
+    api.signInAs(FRIEND.handle);
+    await api.feed.unlike(third.id);
+    await api.feed.like(third.id);
+    await api.feed.unlike(third.id);
+    api.signInAs(ME.handle);
+    expect((await api.notifications.list()).items.filter((n) => n.postId === third.id).map((n) => n.kind)).toEqual(['comment']);
+    expect(await api.notifications.unreadCount()).toBe(4);
+  });
+
+  it('a block hides even a fixture row; deleting an account takes its rows', async () => {
+    const api = make();
+    await signInMe(api);
+    await api.blocks.block(id('friend_e'));
+    expect((await api.notifications.list()).items.some((n) => n.actors.some((p) => p.id === id('friend_e')))).toBe(false);
+    expect(await api.notifications.unreadCount()).toBe(2);
+
+    api.signInAs(FRIEND.handle);
+    await api.deleteAccount();
+    await signInMe(api);
+    const items = (await api.notifications.list()).items;
+    expect(items.some((n) => n.actors.some((p) => p.id === id(FRIEND.handle)))).toBe(false);
+    expect(items[0]).toMatchObject({ kind: 'like', actorCount: 1 });
+  });
+
+  it('controls: clearNotifications empties the inbox until resetToFixtures; failNext reaches the methods', async () => {
+    const api = make();
+    await signInMe(api);
+    api.clearNotifications();
+    expect(await api.notifications.list()).toEqual({ items: [], nextCursor: null });
+    expect(await api.notifications.unreadCount()).toBe(0);
+    api.resetToFixtures();
+    await signInMe(api);
+    expect(await api.notifications.unreadCount()).toBe(3);
+
+    api.failNext('network', 'notifications.list');
+    await expect(api.notifications.list()).rejects.toMatchObject({ code: 'network' });
+    api.failNext('network', 'notifications.unreadCount');
+    await expect(api.notifications.unreadCount()).rejects.toMatchObject({ code: 'network' });
+    api.failNext('network', 'feed.getPost');
+    await expect(api.feed.getPost('feed-1')).rejects.toMatchObject({ code: 'network' });
+    await api.signOut();
+    await expect(api.notifications.list()).rejects.toMatchObject({ code: 'unauthorized' });
+  });
+
+  it("feed.getPost: own and followed posts as the feed shows them; a stranger's or a missing one is not_found", async () => {
+    const api = make();
+    await signInMe(api);
+    const feed = (await api.feed.getFeed({ limit: 100 })).items;
+    const friendPost = feed.find((i) => i.actor.id === id(FRIEND.handle))!;
+    expect(await api.feed.getPost(friendPost.id)).toEqual(friendPost);
+
+    api.signInAs('friend_e');
+    const strangerPost = (await api.feed.listUser(id('friend_e'), { limit: 1 })).items[0]!;
+    await signInMe(api);
+    await expect(api.feed.getPost(strangerPost.id)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(api.feed.getPost('feed-does-not-exist')).rejects.toMatchObject({ code: 'not_found' });
+  });
+});
+
+// T-31 Release 2. The conformance suite covers settings, post subscriptions and tokens on fresh
+// accounts; these pin what only the fake has: `pendingPushes` (the server's claim rules, applied to
+// what was queued), `pushTokens`, and the re-rank cascade the fake has to do by hand.
+describe('push notifications (T-31 Release 2)', () => {
+  const id = (handle: string) => userIdFor(handle);
+
+  /** A starter Bev `handle` has not ranked, ranked by them at the bottom of LOVED. */
+  async function rankSomethingNew(api: FakeApi) {
+    const mine = new Set((await api.rankings.listMine({ page: { limit: 100 } })).items.map((r) => r.bev.id));
+    const bev = (await api.bevs.getStarterCandidates()).find((b) => !mine.has(b.id))!;
+    const ids = await api.rankings.listBucket('LOVED');
+    await api.rankings.submitRanking({ bevId: bev.id, bucket: 'LOVED', insertIndex: ids.length, expectedBucketSize: ids.length, comparisons: [] });
+    return bev.id;
+  }
+
+  it('pendingPushes: the settings, the subscription and "new rankings only" decide what would be pushed', async () => {
+    const api = make();
+    const me = await signInMe(api);
+    const myPost = (await api.feed.listUser(me.userId, { limit: 3 })).items[2]!;
+    await api.notifications.setPostNotification(id(FRIEND.handle), true);
+
+    api.signInAs(FRIEND.handle);
+    await api.feed.like(myPost.id);
+    const bevId = await rankSomethingNew(api);
+    const post = (await api.feed.listUser(id(FRIEND.handle), { limit: 1 })).items[0]!;
+    api.signInAs(ME.handle);
+
+    // posts is off by default: the like only.
+    expect(api.pendingPushes(me.userId)).toEqual([{ kind: 'like', actorHandle: FRIEND.handle, postId: myPost.id }]);
+    const on = { paused: false, follows: true, likes: true, comments: true, posts: true };
+    await api.notifications.updateSettings(on);
+    expect(api.pendingPushes(me.userId)).toEqual([
+      { kind: 'like', actorHandle: FRIEND.handle, postId: myPost.id },
+      { kind: 'post', actorHandle: FRIEND.handle, postId: post.id },
+    ]);
+    // Paused: nothing. Un-paused with likes off: the post only.
+    await api.notifications.updateSettings({ ...on, paused: true });
+    expect(api.pendingPushes(me.userId)).toEqual([]);
+    await api.notifications.updateSettings({ ...on, likes: false });
+    expect(api.pendingPushes(me.userId)).toEqual([{ kind: 'post', actorHandle: FRIEND.handle, postId: post.id }]);
+
+    // A re-rank queues nothing, and its old post (gone on the server) takes its push with it.
+    api.signInAs(FRIEND.handle);
+    const ids = (await api.rankings.listBucket('LOVED')).filter((x) => x !== bevId);
+    await api.rankings.rerankBev({ bevId, bucket: 'LOVED', insertIndex: 0, expectedBucketSize: ids.length, comparisons: [] });
+    api.signInAs(ME.handle);
+    expect(api.pendingPushes(me.userId)).toEqual([]);
+  });
+
+  it('pendingPushes: an unlike, an unfollow of the person chosen, and a block each drop a push', async () => {
+    const api = make();
+    const me = await signInMe(api);
+    await api.notifications.updateSettings({ paused: false, follows: true, likes: true, comments: true, posts: true });
+    await api.notifications.setPostNotification(id(FRIEND.handle), true);
+    const myPost = (await api.feed.listUser(me.userId, { limit: 3 })).items[2]!;
+
+    api.signInAs(FRIEND.handle);
+    await api.feed.like(myPost.id);
+    await api.feed.unlike(myPost.id);
+    await rankSomethingNew(api);
+    api.signInAs(ME.handle);
+    expect(api.pendingPushes(me.userId).map((p) => p.kind)).toEqual(['post']);
+
+    await api.follows.unfollow(id(FRIEND.handle));
+    expect(api.pendingPushes(me.userId)).toEqual([]);
+    expect((await api.notifications.listPostNotificationPeople({ q: FRIEND.handle })).items).toEqual([]);
+    await api.follows.follow(id(FRIEND.handle));
+    expect((await api.notifications.listPostNotificationPeople({ q: FRIEND.handle })).items).toMatchObject([
+      { id: id(FRIEND.handle), subscribed: false, isFollowing: true },
+    ]);
+
+    // friend_b comments on ME's post; ME blocks friend_b: the push goes, and so does friend_b.
+    api.signInAs('friend_b');
+    await api.comments.add(myPost.id, 'from friend b');
+    api.signInAs(ME.handle);
+    expect(api.pendingPushes(me.userId)).toEqual([{ kind: 'comment', actorHandle: 'friend_b', postId: myPost.id }]);
+    await api.blocks.block(id('friend_b'));
+    expect(api.pendingPushes(me.userId)).toEqual([]);
+    expect((await api.notifications.listPostNotificationPeople({ q: 'friend_b' })).items).toEqual([]);
+  });
+
+  it("re-ranking a post drops the notifications about it, as the server's cascade does", async () => {
+    const api = make();
+    const me = await signInMe(api);
+    const [newest] = (await api.feed.listUser(me.userId, { limit: 1 })).items;
+    expect(await api.notifications.unreadCount()).toBe(3);
+    const bucket = newest!.bucket;
+    const ids = (await api.rankings.listBucket(bucket)).filter((x) => x !== newest!.bev.id);
+    await api.rankings.rerankBev({ bevId: newest!.bev.id, bucket, insertIndex: 0, expectedBucketSize: ids.length, comparisons: [] });
+    // The pair of likes on that post is gone; the comment and the follow are not.
+    expect((await api.notifications.list()).items.some((n) => n.postId === newest!.id)).toBe(false);
+    expect(await api.notifications.unreadCount()).toBe(2);
+  });
+
+  it('device tokens: one device, one account; ten per user; only your own can be unregistered', async () => {
+    const api = make();
+    const me = await signInMe(api);
+    const t = (n: number) => `ExponentPushToken[fake-${n}]`;
+    await api.notifications.registerPushToken(t(1));
+    expect(api.pushTokens(me.userId)).toEqual([t(1)]);
+    await expect(api.notifications.registerPushToken('nope')).rejects.toMatchObject({ code: 'validation', detail: { field: 'token' } });
+
+    api.signInAs(FRIEND.handle);
+    await api.notifications.registerPushToken(t(1));
+    expect(api.pushTokens(me.userId)).toEqual([]);
+    expect(api.pushTokens(id(FRIEND.handle))).toEqual([t(1)]);
+    for (let n = 2; n <= 11; n++) await api.notifications.registerPushToken(t(n));
+    expect(api.pushTokens(id(FRIEND.handle))).toEqual([11, 10, 9, 8, 7, 6, 5, 4, 3, 2].map(t));
+
+    api.signInAs(ME.handle);
+    await api.notifications.unregisterPushToken(t(11));
+    expect(api.pushTokens(id(FRIEND.handle))).toHaveLength(10);
+
+    api.resetToFixtures();
+    expect(api.pushTokens(id(FRIEND.handle))).toEqual([]);
+  });
+
+  it('controls reach the same state, and failNext reaches the new methods', async () => {
+    const api = make();
+    const me = await signInMe(api);
+    expect(controls.pendingPushes).toBeDefined();
+    expect(controls.pushTokens).toBeDefined();
+    api.failNext('network', 'notifications.getSettings');
+    await expect(api.notifications.getSettings()).rejects.toMatchObject({ code: 'network' });
+    expect(await api.notifications.getSettings()).toEqual({ paused: false, follows: true, likes: true, comments: true, posts: false });
+    expect(api.pendingPushes(me.userId)).toEqual([]);
   });
 });

@@ -43,7 +43,21 @@ export interface BevArtProps {
 }
 export declare function BevArt(props: BevArtProps): React.ReactElement;
 
-export interface BevImageProps { src?: string; art?: BevArtProps; alt?: string; size?: 40 | 56 | 96 | 155 | number; status?: 'ready' | 'processing' | 'loading'; className?: string }
+export interface BevImageProps {
+  src?: string; art?: BevArtProps; alt?: string; size?: 40 | 56 | 96 | 155 | number;
+  status?: 'ready' | 'processing' | 'loading';
+  /** What the `processing` shimmer is waiting for, in the accessible name. Defaults to "photo processing". */
+  processingLabel?: string;
+  /**
+   * Where the label sits on a generated icon, normalised 0-1 against the artwork inside the
+   * tile's 8% padding (`BevSummary.iconLabelBand`). `wordmark` is set across it, in white when
+   * `dark`; a tile too small for one line of type shows the illustration alone.
+   */
+  labelBand?: { x: number; y: number; width: number; height: number; dark: boolean } | null;
+  /** The text to set across `labelBand`, normally the Bev's brand or its name. */
+  wordmark?: string;
+  className?: string;
+}
 export declare function BevImage(props: BevImageProps): React.ReactElement;
 
 export interface ScoreBubbleProps {
@@ -78,6 +92,23 @@ export interface AvatarPickerProps {
   className?: string;
 }
 export declare function AvatarPicker(props: AvatarPickerProps): React.ReactElement;
+
+/** The square of a photo framed in the PhotoCropper, in the photo's own pixels (`x`, `y`: its top-left corner). */
+export interface PhotoCrop { x: number; y: number; size: number }
+export interface PhotoCropperProps {
+  /** The picked photo, upright. */
+  src: string;
+  /** Its size in pixels: the crop is worked out from it. */
+  width: number; height: number;
+  /** "Use photo": the square the circle showed. */
+  onDone?: (crop: PhotoCrop) => void;
+  /** "Cancel": nothing is uploaded and the photo stays as it was. */
+  onCancel?: () => void;
+  className?: string;
+}
+/** How far past "just fills the circle" a photo can be zoomed. */
+export declare const CROP_MAX_ZOOM: 4;
+export declare function PhotoCropper(props: PhotoCropperProps): React.ReactElement;
 
 export interface PillProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'filled' | 'outlined'; icon?: string; iconRight?: string;
@@ -120,7 +151,31 @@ export declare function TextField(props: TextFieldProps): React.ReactElement;
 export interface PriceTierPickerProps { value?: 1 | 2 | 3 | 4 | null; estimated?: boolean; onChange?: (tier: number | null, estimated: boolean) => void; className?: string }
 export declare function PriceTierPicker(props: PriceTierPickerProps): React.ReactElement;
 
-export interface HeaderAction { icon: string; label: string; badge?: number; onClick?: () => void; variant?: 'plain' | 'filled' }
+/**
+ * One category in onboarding's go-tos grid (three columns): a Bev's art over the category's label. Tap up to
+ * three, favorite first; the tap order is the ranking, and a picked tile shows its number in a `primary` badge.
+ */
+export interface PickTileProps {
+  /** The category's label, from `Bevi.categories` ("Coffee", "Spirits & cocktails"). */
+  label: string;
+  /** The art, as BevImage takes it: the category's most-rated starter Bev's cutout or icon (`src`), else the category's own `art`. */
+  src?: string; art?: BevArtProps;
+  /** Picked, in this place (the order it was tapped in): `primaryTint`, a 2pt `primary` rim and the number badge. Omit when not picked. */
+  rank?: 1 | 2 | 3;
+  /** Three are picked and this one isn't: the art fades to 35%, the label goes `textSecondary`, and a tap does nothing. */
+  disabled?: boolean;
+  onClick?: () => void; className?: string;
+}
+export declare function PickTile(props: PickTileProps): React.ReactElement;
+
+export interface HeaderAction {
+  icon: string;
+  /** The accessible name. With a `badge` it says the number too ("Notifications, 3 unread"): the badge itself is not read out. */
+  label: string;
+  /** A count in `onDeep` on `badgeRed` at the icon's top right; nothing at 0. The Feed's bell. */
+  badge?: number;
+  onClick?: () => void; variant?: 'plain' | 'filled';
+}
 export interface HeaderProps { title?: string; wordmark?: boolean; centered?: boolean; actions?: HeaderAction[]; onBack?: () => void; className?: string }
 export declare function Header(props: HeaderProps): React.ReactElement;
 
@@ -179,7 +234,12 @@ export interface FeedPostProps {
   /** Shows the author's Follow pill (UserRow's) at the start of the action row, where the heart sits on a feed post. Explore only. */
   onFollow?: () => void;
   /** Without `onRank` / `onSave` the post has no Rank it / Want to Try action. */
-  onRank?: () => void; onSave?: () => void; onOpen?: () => void; divider?: boolean; className?: string;
+  onRank?: () => void; onSave?: () => void; onOpen?: () => void;
+  /** Opens the post's More menu (Report post, Block account): an ellipsis IconButton after the ScoreBubble. Pass it on other people's posts only; without it there is no control. */
+  onMore?: () => void;
+  /** The More control's accessible name; say whose post it is ("More actions, post by @friend_a"). Defaults to "More actions". */
+  moreLabel?: string;
+  divider?: boolean; className?: string;
 }
 export declare function FeedPost(props: FeedPostProps): React.ReactElement;
 
@@ -199,6 +259,10 @@ export declare function BevOfCard(props: BevOfCardProps): React.ReactElement;
 
 export interface ProfileListRowProps { icon: string; iconFilled?: boolean; label: string; count?: number; onClick?: () => void; divider?: boolean; className?: string }
 export declare function ProfileListRow(props: ProfileListRowProps): React.ReactElement;
+
+/** An on/off switch for one setting: `primary` when on, `borderStrong` when off, with a `surface` knob. `label` is its accessible name: pass the row's label ("Likes"). */
+export interface SwitchProps { checked?: boolean; onChange?: (checked: boolean) => void; label: string; disabled?: boolean; className?: string }
+export declare function Switch(props: SwitchProps): React.ReactElement;
 
 /** A 4pt track in `input` with a `primary` fill (a share you earned). `tone` recolours the fill with a score band (TasteBar). Decorative (`aria-hidden`): the line beside it says the number. */
 export interface ProgressBarProps { value: number; tone?: 'primary' | 'scoreHigh' | 'scoreMid' | 'scoreLow'; className?: string }
@@ -227,6 +291,30 @@ export interface UserRowProps {
 }
 export declare function UserRow(props: UserRowProps): React.ReactElement;
 
+export interface NotificationRowProps {
+  /** A new follower, a like on your post, or a comment on it. */
+  kind: 'follow' | 'like' | 'comment';
+  /** Who did it, newest first. One person shows a 44pt avatar; two show a pair of 32pt avatars. Only the first two are named. */
+  actors: Person[];
+  /** How many people in all. More than the two shown adds "and N others" (likes on one post share a row). Defaults to `actors.length`. */
+  actorCount?: number;
+  /** The post's Bev, for a like or a comment: its name ends the sentence and its image is the 40pt thumbnail. */
+  bev?: { name: string; src?: string; art?: BevArtProps };
+  /** The comment, quoted in `textSecondary` on up to two lines. */
+  comment?: string;
+  /** A short age: "2m", "1h", "3d", "2w". */
+  time: string;
+  /** Tints the row `primaryTint`, adds the dot, and starts the spoken sentence with "Unread." */
+  unread?: boolean;
+  /** A follow row only: whether you follow them back. Shows "Follow back" or "Following"; omit to show no pill. */
+  following?: boolean;
+  onFollow?: () => void;
+  /** Opens the post (a like, or a comment with its comments up) or the person's profile (a follow). */
+  onClick?: () => void;
+  divider?: boolean; className?: string;
+}
+export declare function NotificationRow(props: NotificationRowProps): React.ReactElement;
+
 /** Gut-check choice: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label. */
 export interface BucketButtonProps {
   bucket: Bucket; selected?: boolean;
@@ -251,13 +339,22 @@ export declare function ErrorState(props: ErrorStateProps): React.ReactElement;
 export interface SkeletonProps { variant?: 'text' | 'block' | 'circle' | 'row' | 'post'; width?: number | string; height?: number; lines?: number; className?: string }
 export declare function Skeleton(props: SkeletonProps): React.ReactElement;
 
-export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 90; onClose?: () => void; children?: React.ReactNode; className?: string }
+export interface SheetProps { open?: boolean; title?: string; snap?: 40 | 60 | 90;
+  /** The sheet opens at `snap` and its top drags up to the whole screen, where it rests too; from there it comes back down to `snap` or closes, by how the finger let go. For a sheet people stay in (CommentsSheet). */
+  expand?: boolean; onClose?: () => void;
+  /** The sheet has finished closing (after its exit animation and, on a phone, once the modal is really gone). Navigate or open another modal from here, never in the same tick as `onClose`. */
+  onClosed?: () => void; children?: React.ReactNode; className?: string }
 export declare function Sheet(props: SheetProps): React.ReactElement | null;
 
 /** One comment as the post and the sheet draw it. `time` is relative ("2 hours ago"); `mine` adds Delete in the sheet. */
 export interface PostComment { id?: string; author: Person; body: string; time?: string; mine?: boolean }
-/** The post's comments in a 90% Sheet, oldest at the top, newest above the composer; empty state "No comments yet"; composer "Add a comment…" + Post, 280-character limit (the count shows from 20 left). */
-export interface CommentsSheetProps { open?: boolean; comments?: PostComment[]; me?: Person; onClose?: () => void; onPost?: (body: string) => void; onDelete?: (id: string) => void; error?: string; className?: string }
+/** The post's comments in a Sheet that opens at 60% and expands to the whole screen, oldest at the top, newest above the composer; empty state "No comments yet"; composer "Add a comment…" + Post pinned to the bottom of the screen at either height, 280-character limit (the count shows from 20 left). */
+export interface CommentsSheetProps { open?: boolean; comments?: PostComment[]; me?: Person; onClose?: () => void; onPost?: (body: string) => void; onDelete?: (id: string) => void;
+  /** Opens the More menu of someone else's comment (Report comment, Block account): an ellipsis at the end of the row, named "More actions, comment by @handle". Never on your own comments, which end in Delete. Without it no row has one. */
+  onMore?: (comment: PostComment) => void;
+  error?: string;
+  /** A sheet that opens over this one (the More menu): rendered inside this sheet, not beside it, so that on a phone it presents from this sheet's own modal. */
+  children?: React.ReactNode; className?: string }
 export declare function CommentsSheet(props: CommentsSheetProps): React.ReactElement | null;
 
 /** One category's progress: the contract's `CategoryProgress`, as `stats.getCategoryProgress()` returns it. */
@@ -349,12 +446,12 @@ declare global {
   interface Window {
     Bevi: {
       Wordmark: typeof Wordmark; Icon: typeof Icon; BevArt: typeof BevArt; BevImage: typeof BevImage; ScoreBubble: typeof ScoreBubble;
-      PriceTier: typeof PriceTier; Avatar: typeof Avatar; AvatarStack: typeof AvatarStack; Pill: typeof Pill; Button: typeof Button;
-      IconButton: typeof IconButton; LikeButton: typeof LikeButton; CommentButton: typeof CommentButton; FilterPill: typeof FilterPill; SortToggle: typeof SortToggle; SearchBar: typeof SearchBar;
-      TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; Header: typeof Header; SectionHeader: typeof SectionHeader;
+      PriceTier: typeof PriceTier; Avatar: typeof Avatar; AvatarStack: typeof AvatarStack; PhotoCropper: typeof PhotoCropper; Pill: typeof Pill; Button: typeof Button;
+      IconButton: typeof IconButton; LikeButton: typeof LikeButton; CommentButton: typeof CommentButton; FilterPill: typeof FilterPill; SortToggle: typeof SortToggle; Switch: typeof Switch; SearchBar: typeof SearchBar;
+      TextField: typeof TextField; PriceTierPicker: typeof PriceTierPicker; PickTile: typeof PickTile; Header: typeof Header; SectionHeader: typeof SectionHeader;
       ListScopeDropdown: typeof ListScopeDropdown; SegmentedTabs: typeof SegmentedTabs; TabBar: typeof TabBar; BevRow: typeof BevRow;
       FeedPost: typeof FeedPost; FeaturedCard: typeof FeaturedCard; BevOfCard: typeof BevOfCard; ProfileListRow: typeof ProfileListRow; StatCard: typeof StatCard;
-      UserRow: typeof UserRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; TasteBar: typeof TasteBar; TasteProfile: typeof TasteProfile; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
+      UserRow: typeof UserRow; NotificationRow: typeof NotificationRow; ProgressStrip: typeof ProgressStrip; ProgressBar: typeof ProgressBar; TasteBar: typeof TasteBar; TasteProfile: typeof TasteProfile; BucketButton: typeof BucketButton; CompareCard: typeof CompareCard; ProgressDots: typeof ProgressDots;
       EmptyState: typeof EmptyState; ErrorState: typeof ErrorState; Skeleton: typeof Skeleton; Sheet: typeof Sheet; CommentsSheet: typeof CommentsSheet; CollectionSheet: typeof CollectionSheet;
       FindBevArt: typeof FindBevArt; MapCallout: typeof MapCallout; MapFilterRow: typeof MapFilterRow; MapControls: typeof MapControls; VenueRow: typeof VenueRow; VenueSheet: typeof VenueSheet;
       /** The 15 category slugs with labels and icon names. */

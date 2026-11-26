@@ -1,20 +1,19 @@
 /**
  * Bumped on any breaking change to the types or `BeviApi` below.
  *
- * 3.1.0, over 3.0.0's optional `photoAssetId` and Bev icons: a nutrition
- * snapshot no longer has to come from a barcode. `NutritionPreview` gains
- * `source` (`NutritionSource`: `'openfoodfacts' | 'label-ocr'`), and `barcode`
- * and `sourceUrl` widen to `string | null`, which a label read leaves null.
+ * 3.10.0, over 3.9.0's go-to categories: a nutrition snapshot no longer has
+ * to come from a barcode. `NutritionPreview` gains `source` (`NutritionSource`:
+ * `'openfoodfacts' | 'label-ocr'`), and `barcode` and `sourceUrl` widen to
+ * `string | null`, which a label read leaves null.
  * `BeviApi` is otherwise unchanged: a label is read ON THE DEVICE, by the app,
  * using the platform's own text recogniser, so there is no new API method, no
  * new service and no credential. Barcode lookup, its stored snapshots and the
  * two `basis` strings are unchanged.
  *
  * A minor rather than a major, deliberately. Nothing reads `barcode` at
- * runtime -- it is stored and traced, never rendered -- so the widening costs
- * no shipped client a screen; `sourceUrl` is only ever opened as a link, now
- * behind a null check; and `source` is absent from every snapshot written
- * before this version, so `packages/api` defaults a missing one to
+ * runtime -- it is stored and traced, never rendered; `sourceUrl` is only ever
+ * opened as a link, now behind a null check; and `source` is absent from every
+ * snapshot written before this version, so `packages/api` defaults a missing one to
  * `'openfoodfacts'` where it maps the row, which is what all of them are. No
  * field is removed or retyped into a shape an older client cannot parse.
  *
@@ -22,6 +21,108 @@
  * not: the floor exists for a client that would be served a RESPONSE it cannot
  * parse (`DEVELOPMENT-ARJUN.md` §14), and an older binary reading a snapshot
  * it has no `source` field for simply ignores the key.
+ *
+ * NOT harmless for an installed binary built before this version, though: its
+ * NutritionCard renders a label-read Bev as a "Barcode match" with an Open
+ * Food Facts button, and pressing it calls `Linking.openURL(null)`, which
+ * throws synchronously (React Native's `_validateURL` invariant) inside the
+ * press handler -- an uncaught error, fatal in a release build. The snapshot
+ * parses and the card renders; only that press fails.
+ *
+ * 3.9.0, over 3.8.0's push notifications: go-to categories (DELIVERABLE-44).
+ * Additive: `profile.getCategoryPicks()` and `profile.setCategoryPicks()`,
+ * up to `MAX_CATEGORY_PICKS` top-level categories picked in onboarding,
+ * favourite first, private to their owner. Backed by the new
+ * `user_category_picks` table and `set_category_picks` RPC. NOT a reason to
+ * raise `min_contract_version`: no existing type or method changed, and an
+ * older client calls neither method.
+ *
+ * 3.8.0, over 3.7.0's inbox: push notifications and their settings (T-31,
+ * Release 2). Additive: six `notifications` methods -- `getSettings` and
+ * `updateSettings` (`NotificationSettings`: `paused` and one switch per kind),
+ * `listPostNotificationPeople` and `setPostNotification` (be pushed when
+ * someone you follow posts a new Bev; `PostNotificationPerson`), and
+ * `registerPushToken` / `unregisterPushToken` (this device's Expo token). A
+ * backend without them answers the default settings and an empty people list,
+ * and ignores a token; saving a setting or a choice throws instead of
+ * pretending. NOT a reason to raise `min_contract_version`: an older client
+ * calls none of it, and nothing it already reads changed.
+ *
+ * 3.7.0, over 3.6.0's tester reporting: the notifications inbox (T-31).
+ * Additive: a `notifications` namespace (`list`, `unreadCount`, `markRead`)
+ * answering `Notification` rows, and `feed.getPost`, the one post a
+ * notification opens. Likes on one post share a row; every row is checked at
+ * read time, so an unfollow, an unlike, a deleted comment or a block hides
+ * it. A backend without the inbox answers an empty page and a count of 0.
+ * NOT a reason to raise `min_contract_version`: an older client never calls
+ * any of it, and nothing it already reads changed.
+ *
+ * 3.6.0, over 3.5.0's places: testers report bugs without ranking them.
+ * Additive: `bugs.canRank()`, true for a founder (an admin) only. For an
+ * account that may not rank, `place` throws 'unauthorized' and every
+ * `BugReportSummary.rank` is null. `markVerified` now throws 'conflict' for
+ * a ticket that is not in review, for every caller. NOT a reason to raise
+ * `min_contract_version`: an older client never calls `canRank`, still
+ * files and lists, and reads a refused placement or verify as a failure.
+ *
+ * 3.5.0, over 3.4.0's barcode product lookup: where a Bev was had (BEV-22).
+ * Additive: `RankedBev.venue` and `FeedItem.venue` (so `ExplorePost` too),
+ * `SubmitRankingInput.venueId`, `rankings.setVenue`, `rankings.getVenue` and
+ * `rankings.locationSummary`, and six `venues` methods: `search`,
+ * `searchMore`, `addPlace`, `recent`, `bevdMap`, `bevdAt`. A venue says what
+ * kind of place it is (`placeType`), and may now be anywhere on the Earth, so
+ * `NYC_BOUNDS` describes the imported venues and the parked venue map, not
+ * every `Venue`. NOT a reason to raise `min_contract_version`:
+ * a client built against 3.3.0 never reads the new fields and calls none of
+ * the new methods.
+ *
+ * 3.4.0, over 3.3.0's native bug reporter: a barcode scan fills in a new Bev.
+ * `NutritionApi` gains `lookupProduct`, returning a `BarcodeProduct`: the name,
+ * brand and Bevi category the provider lists for a barcode, with the
+ * `NutritionPreview` `lookupBarcode` already returned. Purely additive for
+ * callers, hence a minor: `lookupBarcode`, `NutritionPreview` and
+ * `CreateBevInput` keep their shapes, and nothing a client is served changed.
+ * The app's wizard copies the product into its form fields; what is created
+ * still goes through `bevs.create` unchanged, so there is no migration and no
+ * new RPC. NOT a reason to raise `min_contract_version`.
+ *
+ * 3.3.0, over 3.2.0's version gate: the native bug reporter (IM-10 part 2).
+ * `BugReportInput.evidence[].file` widens from `Blob` to `UploadPayload`, the
+ * union `media.upload` has taken since 2.15.0. Purely additive for callers,
+ * hence a minor: every `Blob` a caller passes today is still accepted, and
+ * nothing a client is served changed. On React Native a caller passes bytes,
+ * and an implementation off the web refuses a `Blob` with `'validation'`
+ * before anything is staged (the same guard as `media.upload`). The
+ * `bug-report` Edge Function and the `bug-evidence` bucket are untouched: they
+ * only ever see the uploaded object. NOT a reason to raise
+ * `min_contract_version`.
+ *
+ * 3.2.0, over 3.1.0's blocks and reports: the version gate reads its real row
+ * (IA-2). `AppConfig` gains `minContractVersion` (the lowest `CONTRACT_VERSION`
+ * the backend still serves, beside `minAppVersion`) and `maintenanceMessage`
+ * (what to show while `maintenance` is true, or null). Purely additive for
+ * callers, hence a minor: `minAppVersion` and `maintenance` keep their names
+ * and types, `meta.getAppConfig` keeps its signature and stays callable signed
+ * out, and a client built against 3.1.0 never reads the two new fields. What
+ * does change is where the values come from: `packages/api` returned a fixed
+ * `{ minAppVersion: '0.1.0', maintenance: false }` until now, and reads
+ * `app_config` through `get_app_config()` from here on.
+ *
+ * NOT a reason to raise `min_contract_version` either: nothing an installed
+ * binary is served changed shape. Both floors are still seeded `'0.0.0'`, so
+ * the gate is open until an operator raises one on purpose
+ * (`DEVELOPMENT-ARJUN.md` §14).
+ *
+ * 3.1.0, over 3.0.0's custom Bevs and generated icons: blocking and content
+ * reporting (IS-7, App Store Guideline 1.2). `BeviApi` gains `blocks` (`block`,
+ * `unblock`, and `list` returning `Page<BlockedUser>`) and `reports` (`report`,
+ * about a post, a comment or a profile, with a `ReportReason` and an optional
+ * note), plus `ReportContentKind`, `ReportReason`, `REPORT_REASONS` and
+ * `REPORT_NOTE_MAX`. Purely additive for callers, hence a minor: no existing
+ * type or method changes shape. A block does change what existing reads return
+ * (the two people drop out of each other's feeds, comments and lists, and read
+ * each other as 'not_found'), but through codes every older client already
+ * handles. Nothing lets a caller learn who has blocked them.
  *
  * 3.0.0, over 2.15.0's raw-byte uploads: `CreateBevInput.photoAssetId` became
  * OPTIONAL. That is a widening for anything CONSTRUCTING the input, but a
@@ -50,10 +151,20 @@
  * reject a `Blob` with `'validation'` instead of uploading it -- React
  * Native's `Blob` holds a native handle, not bytes, and Storage silently
  * writes a 0-byte object. Bug report evidence
- * (`BugReportInput.evidence[].file`) stays web-only until the reporter is
- * ported.
+ * (`BugReportInput.evidence[].file`) followed in 3.3.0.
  */
-export const CONTRACT_VERSION = '3.1.0';
+// 3.0.0: user-created photo-backed Bevs enqueue icon generation automatically.
+// 3.1.0: blocks and content reports (IS-7), additive.
+// 3.2.0: AppConfig gains minContractVersion and maintenanceMessage (IA-2), additive.
+// 3.3.0: BugReportInput.evidence[].file is an UploadPayload (the native bug reporter, IM-10), additive.
+// 3.4.0: nutrition.lookupProduct and BarcodeProduct (a barcode scan fills in a new Bev), additive.
+// 3.5.0: where a Bev was had: a place on a ranking and a post, the place picker, the map (BEV-22), additive.
+// 3.6.0: bugs.canRank; testers cannot place and see no ranks; markVerified only from In review, additive.
+// 3.7.0: the notifications inbox (notifications.list/unreadCount/markRead) and feed.getPost (T-31), additive.
+// 3.8.0: push notifications: settings, post subscriptions, device tokens (T-31 Release 2), additive.
+// 3.9.0: profile.getCategoryPicks / setCategoryPicks, the go-to categories picked in onboarding (DELIVERABLE-44), additive.
+// 3.10.0: NutritionPreview.source; a snapshot read from a label photo on the device, with no barcode (BEV-13), additive.
+export const CONTRACT_VERSION = '3.10.0';
 
 export * from './enums';
 export * from './errors';

@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Platform, Text } from 'react-native';
+
+import { grabModalDismiss } from '@/testing/modalDismiss';
 
 import { Button } from '../Button';
 import { Sheet } from '../Sheet';
@@ -134,5 +136,230 @@ describe('on a wide viewport', () => {
     expect(frame().maxWidth).toBeUndefined();
     expect(frame().alignSelf).toBeUndefined();
     expect(frame().width).toBeUndefined();
+  });
+});
+
+describe('onClosed', () => {
+  function Closing({ onClosed }: { onClosed: () => void }) {
+    const [open, setOpen] = useState(true);
+    return (
+      <Sheet open={open} title="Done?" onClose={() => setOpen(false)} onClosed={onClosed}>
+        <Text>Body</Text>
+      </Sheet>
+    );
+  }
+  const closeIt = () => fireEvent.press(screen.getByTestId('sheet-scrim', { includeHiddenElements: true }));
+
+  it('iOS: waits for the Modal to report it is dismissed, not just for the exit animation', async () => {
+    const onClosed = jest.fn();
+    await render(<Closing onClosed={onClosed} />);
+    const dismiss = grabModalDismiss();
+    await closeIt();
+    expect(onClosed).not.toHaveBeenCalled();
+    await settle();
+    expect(screen.queryByText('Body')).toBeNull();
+    expect(onClosed).not.toHaveBeenCalled();
+    await act(() => dismiss());
+    expect(onClosed).toHaveBeenCalledTimes(1);
+    // Once per close, however often it is told.
+    await act(() => dismiss());
+    await act(() => jest.advanceTimersByTime(5000));
+    expect(onClosed).toHaveBeenCalledTimes(1);
+  });
+
+  it('iOS: still fires if the Modal never reports it, so nothing waiting on it is stranded', async () => {
+    const onClosed = jest.fn();
+    await render(<Closing onClosed={onClosed} />);
+    await closeIt();
+    await settle();
+    expect(onClosed).not.toHaveBeenCalled();
+    await act(() => jest.advanceTimersByTime(1000));
+    expect(onClosed).toHaveBeenCalledTimes(1);
+  });
+
+  it('web (no onDismiss there): fires as soon as the Sheet has unmounted its Modal', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    const onClosed = jest.fn();
+    await render(<Closing onClosed={onClosed} />);
+    await closeIt();
+    expect(onClosed).not.toHaveBeenCalled();
+    await settle();
+    expect(screen.queryByText('Body')).toBeNull();
+    expect(onClosed).toHaveBeenCalledTimes(1);
+    jest.restoreAllMocks();
+  });
+
+  it('does not fire for a sheet that was never opened', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web');
+    const onClosed = jest.fn();
+    await render(<Sheet open={false} onClosed={onClosed} />);
+    await settle();
+    expect(onClosed).not.toHaveBeenCalled();
+    jest.restoreAllMocks();
+  });
+});
+
+describe('dragging the top down', () => {
+  const { fireGestureHandler, getByGestureTestId } = require('react-native-gesture-handler/jest-utils');
+  const { State } = require('react-native-gesture-handler');
+  // The pan takes hold once the finger has moved past the slop (6pt), as on a device.
+  const drag = (translationY: number, velocityY = 0) =>
+    fireGestureHandler(getByGestureTestId('sheet-grab'), [
+      { state: State.BEGAN, translationY: 0 },
+      { state: State.ACTIVE, translationY: 6, velocityY },
+      { state: State.ACTIVE, translationY, velocityY },
+      { state: State.END, translationY, velocityY },
+    ]);
+
+  it('closes the sheet once let go far enough down, however slowly', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(400));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes on a quick flick, however short', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(30, 1500));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('goes back when let go, slowly, less than a third of the way down', async () => {
+    const { Dimensions } = require('react-native');
+    const sheetHeight = Dimensions.get('window').height * 0.4;
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(sheetHeight * 0.3));
+    expect(onClose).not.toHaveBeenCalled();
+    await act(() => drag(sheetHeight * 0.4));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('judges a release by where it was heading: the same short drag closes at a walking pace', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    // 30pt down and still: back. 30pt down at 400pt/s would have coasted another 200pt: closed.
+    await act(() => drag(30, 0));
+    expect(onClose).not.toHaveBeenCalled();
+    await act(() => drag(30, 400));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('springs back after a short, slow drag', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(30));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('stays open when a long drag ends in a flick back up', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(400, -1500));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('asks to close once, and comes back if the parent keeps it open', async () => {
+    // A parent that ignores onClose: the sheet has already left for the bottom edge, so it is
+    // brought back rather than left off the screen, still open, with nothing to drag.
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(400, 1500));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    await act(() => jest.advanceTimersByTime(1000));
+    expect(screen.getByText('Body')).toBeTruthy();
+    // And it can be flung again.
+    await act(() => drag(400, 1500));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('a parent that closes a moment later still gets the flung exit, not a second one', async () => {
+    const onClose = jest.fn();
+    const sheet = (open: boolean) => (
+      <Sheet open={open} title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>
+    );
+    const view = await render(sheet(true));
+    await act(() => drag(400, 1500));
+    // The parent answers after a few frames (a navigation, a mutation), inside the grace period.
+    await act(() => jest.advanceTimersByTime(100));
+    await view.rerender(sheet(false));
+    expect(screen.getByText('Body')).toBeTruthy();
+    await settle();
+    expect(screen.queryByText('Body')).toBeNull();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('never closes on a cancelled drag', async () => {
+    const onClose = jest.fn();
+    await render(
+      <Sheet open title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() =>
+      fireGestureHandler(getByGestureTestId('sheet-grab'), [
+        { state: State.BEGAN, translationY: 0 },
+        { state: State.ACTIVE, translationY: 400 },
+        { state: State.CANCELLED, translationY: 400 },
+      ]),
+    );
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('cannot be dragged again while it is closing', async () => {
+    const onClose = jest.fn();
+    const sheet = (open: boolean) => (
+      <Sheet open={open} title="Comments" onClose={onClose}>
+        <Text>Body</Text>
+      </Sheet>
+    );
+    const view = await render(sheet(true));
+    await view.rerender(sheet(false));
+    // Still mounted for its exit: the grab area is there, and no longer takes a drag.
+    expect(screen.getByText('Body')).toBeTruthy();
+    await act(() => drag(400));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('stays on screen when the parent keeps it open', async () => {
+    await render(
+      <Sheet open title="Comments" onClose={() => {}}>
+        <Text>Body</Text>
+      </Sheet>,
+    );
+    await act(() => drag(400));
+    await settle();
+    expect(screen.getByText('Body')).toBeTruthy();
   });
 });

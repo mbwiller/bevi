@@ -14,8 +14,10 @@ import { TextField } from '@/components/TextField';
 import { FormError } from '@/features/auth/AuthScreen';
 import { focusField } from '@/features/auth/focusField';
 import { errorField, formErrorMessage } from '@/features/auth/formError';
+import { AvatarCropStep } from '@/features/profile/AvatarCropStep';
 import { useAvatarUpload } from '@/features/profile/useAvatarUpload';
 import { birthdateProblem, deviceTimezone, isUnder21, maskBirthdate } from '@/features/onboarding/birthdate';
+import { FORM_SCROLL } from '@/lib/formScroll';
 import { spacing, type, useTheme } from '@/theme';
 
 const NAME_MAX = 50;
@@ -78,7 +80,7 @@ function ProfileForm({ me }: { me: Profile }) {
       const timezone = deviceTimezone();
       await updateMe.mutateAsync({ displayName: name, ...(timezone ? { timezone } : null) });
       if (!birthdateLocked) await setBirthDate.mutateAsync(birthdate);
-      router.push('/onboarding/starter');
+      router.push('/onboarding/picks');
     } catch (e) {
       const field = errorField(e);
       if (field === 'displayName' || field === 'birthdate') setError({ field, message: (e as Error).message });
@@ -89,7 +91,7 @@ function ProfileForm({ me }: { me: Profile }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={styles.body} {...FORM_SCROLL}>
       <View style={styles.column}>
         <AvatarPicker
           name={name || me.handle}
@@ -144,6 +146,7 @@ function ProfileForm({ me }: { me: Profile }) {
           Continue
         </Button>
       </View>
+      <AvatarCropStep crop={avatar.crop} />
     </ScrollView>
   );
 }

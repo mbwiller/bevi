@@ -59,6 +59,21 @@ async function winners(): Promise<BevOfPeriodData> {
   return pair;
 }
 
+// Pin "now" (Date only; timers stay real), as Profile.test does, at Sunday noon in New York: the fixture dates its
+// rankings back from now, and from 00:20 to 00:43 there only the newest is in the latest day, so day and week differ.
+const FIXED_NOW = new Date('2026-10-11T16:00:00Z');
+beforeAll(() => {
+  jest.useFakeTimers({
+    now: FIXED_NOW,
+    doNotFake: [
+      'hrtime', 'nextTick', 'performance', 'queueMicrotask', 'requestAnimationFrame', 'cancelAnimationFrame',
+      'requestIdleCallback', 'cancelIdleCallback', 'setImmediate', 'clearImmediate', 'setInterval', 'clearInterval',
+      'setTimeout', 'clearTimeout',
+    ],
+  });
+});
+afterAll(() => jest.useRealTimers());
+
 beforeEach(() => {
   client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   controls.setLatency(0);
@@ -184,8 +199,9 @@ describe('bevOfPeriodCards', () => {
   });
 
   describe('the same Bev won both: always two cards, each dated only when its own period is an earlier one', () => {
-    const DAY = formatPeriodStart('2026-10-14', 'day');
-    const WEEK = formatPeriodStart('2026-10-12', 'week');
+    // Built before the clock is pinned (a describe body runs first), so they are given the pinned now.
+    const DAY = formatPeriodStart('2026-10-14', 'day', FIXED_NOW);
+    const WEEK = formatPeriodStart('2026-10-12', 'week', FIXED_NOW);
 
     it.each([
       [true, true, undefined, undefined],

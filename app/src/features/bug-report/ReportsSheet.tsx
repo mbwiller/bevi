@@ -3,7 +3,7 @@ import * as Linking from 'expo-linking';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useMarkBugVerified, useMyBugReports } from '@/api/hooks';
+import { useCanRankBug, useMarkBugVerified, useMyBugReports } from '@/api/hooks';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -12,17 +12,20 @@ import { IconButton } from '@/components/IconButton';
 import { Sheet } from '@/components/Sheet';
 import { Skeleton } from '@/components/Skeleton';
 import { actionErrorMessage, errorCopy } from '@/lib/errorCopy';
+import { openLink } from '@/lib/openLink';
 import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/theme';
 
-import { byRank, isOpen, ticketMeta } from './labels';
+import { byNewest, byRank, isOpen, ticketMeta } from './labels';
 import { REPORT_UI } from './ReportLayer';
 import { closeSheet, openRank, retrySend, useReport, type OutboxItem, type Sender } from './store';
 
 /**
  * Filed reports: the tickets already filed from this account (not drafts in progress): what is still sending, what is waiting to be placed, and every ticket filed from
- * this account by where it is in the workflow (docs/bug-workflow.md). Open tickets are in the
- * tester's own rank order, each with Place to move it; In review ones are where the tester checks
- * the fix on the device and says so; closed ones are folded away.
+ * this account by where it is in the workflow (docs/bug-workflow.md). For a founder (who may rank,
+ * `bugs.canRank()`), open tickets are in their own rank order, each with Place to move it, and a
+ * row opens the ticket on the board. A tester does not rank and has no board login: their open
+ * tickets are newest first, with no rank, no Place and no link. In review ones are where the
+ * reporter checks the fix on the device and says so; closed ones are folded away.
  */
 export function ReportsSheet({ sender }: { sender: Sender }) {
   const open = useReport((s) => s.sheet === 'reports');
@@ -36,6 +39,8 @@ export function ReportsSheet({ sender }: { sender: Sender }) {
 function ReportsBody({ sender }: { sender: Sender }) {
   const { colors } = useTheme();
   const query = useMyBugReports();
+  // Until the answer is in, no ranking is offered: a tester must never see Place, even for a moment.
+  const canRank = useCanRankBug().data === true;
   const outbox = useReport((s) => s.outbox);
   const unplaced = useReport((s) => s.unplaced);
   const [closedOpen, setClosedOpen] = useState(false);
@@ -45,10 +50,11 @@ function ReportsBody({ sender }: { sender: Sender }) {
   const review = rows.filter((r) => r.state === 'in_review');
   const closed = rows.filter((r) => r.state === 'done' || r.state === 'canceled');
   // Everything else is Open, so no row is ever dropped: open states, 'unknown', and whatever a
-  // server that predates ranking answers (every rank null). Unranked rows sort newest first.
-  const openRows = rows.filter((r) => !review.includes(r) && !closed.includes(r)).sort(byRank);
+  // server that predates ranking answers (every rank null). Unranked rows sort newest first, and
+  // for an account that may not rank every row is.
+  const openRows = rows.filter((r) => !review.includes(r) && !closed.includes(r)).sort(canRank ? byRank : byNewest);
   const openIds = new Set(rows.filter(isOpen).map((r) => r.ticketId));
-  const toPlace = unplaced.filter((id) => openIds.has(id));
+  const toPlace = canRank ? unplaced.filter((id) => openIds.has(id)) : [];
 
   return (
     <View style={styles.body} {...REPORT_UI}>
@@ -80,20 +86,24 @@ function ReportsBody({ sender }: { sender: Sender }) {
       ) : query.isError ? (
         <ErrorState error={query.error} onRetry={() => void query.refetch()} />
       ) : rows.length === 0 && pending.length === 0 ? (
-        <EmptyState icon="file-text" title="Nothing filed yet" body="Reports you send show up here with their status and where you ranked them." />
+        <EmptyState
+          icon="file-text"
+          title="Nothing filed yet"
+          body={canRank ? 'Reports you send show up here with their status and where you ranked them.' : 'Reports you send show up here with their status.'}
+        />
       ) : (
         <>
           {openRows.length ? (
             <Section title="Open">
               {openRows.map((row) => (
-                <TicketRow key={row.ticketId} row={row} placeable={isOpen(row) && openIds.size > 1} />
+                <TicketRow key={row.ticketId} row={row} canRank={canRank} placeable={canRank && isOpen(row) && openIds.size > 1} />
               ))}
             </Section>
           ) : null}
           {review.length ? (
             <Section title="In review">
               {review.map((row) => (
-                <TicketRow key={row.ticketId} row={row}>
+                <TicketRow key={row.ticketId} row={row} canRank={canRank}>
                   <VerifyButton ticketId={row.ticketId} />
                 </TicketRow>
               ))}
@@ -111,7 +121,7 @@ function ReportsBody({ sender }: { sender: Sender }) {
                 <Text style={[type.sectionCaps, styles.grow, { color: colors.textSecondary }]}>{`Closed (${closed.length})`}</Text>
                 <Icon name={closedOpen ? 'chevron-down' : 'chevron-right'} size={18} strokeWidth={2} color={colors.textSecondary} />
               </Pressable>
-              {closedOpen ? closed.map((row) => <TicketRow key={row.ticketId} row={row} />) : null}
+              {closedOpen ? closed.map((row) => <TicketRow key={row.ticketId} row={row} canRank={canRank} />) : null}
             </View>
           ) : null}
         </>
@@ -152,31 +162,59 @@ function OutboxRow({ item, onRetry }: { item: OutboxItem; onRetry: () => void })
   );
 }
 
-function TicketRow({ row, placeable = false, children }: { row: BugReportSummary; placeable?: boolean; children?: React.ReactNode }) {
+/**
+ * One ticket. For a founder (`canRank`) the row is a link to the ticket on the board and carries
+ * its rank; a tester has no board login, so for them it is plain text (the ticket id is in the
+ * meta line) with no rank.
+ */
+function TicketRow({
+  row,
+  canRank,
+  placeable = false,
+  children,
+}: {
+  row: BugReportSummary;
+  canRank: boolean;
+  placeable?: boolean;
+  children?: React.ReactNode;
+}) {
   const { colors } = useTheme();
+  const rank = canRank ? row.rank : null;
+  const label = `${rank ? `Number ${rank}, ` : ''}${row.title}, ${ticketMeta(row)}`;
+  const content = (
+    <>
+      {rank ? (
+        <Text style={[type.heading, styles.rank, { color: colors.primary }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
+          {`#${rank}`}
+        </Text>
+      ) : null}
+      <View style={styles.grow}>
+        <Text style={[type.body, { color: colors.text }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
+          {row.title}
+        </Text>
+        <Text style={[type.caption, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
+          {ticketMeta(row)}
+        </Text>
+      </View>
+    </>
+  );
   return (
     <View style={[styles.ticket, { borderBottomColor: colors.border }]}>
       <View style={styles.ticketTop}>
-        <Pressable
-          onPress={() => void Linking.openURL(row.ticketUrl)}
-          accessibilityRole="link"
-          accessibilityLabel={`${row.rank ? `Number ${row.rank}, ` : ''}${row.title}, ${ticketMeta(row)}`}
-          style={({ pressed }) => [styles.ticketMain, pressed && { opacity: 0.7 }]}
-        >
-          {row.rank ? (
-            <Text style={[type.heading, styles.rank, { color: colors.primary }]} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
-              {`#${row.rank}`}
-            </Text>
-          ) : null}
-          <View style={styles.grow}>
-            <Text style={[type.body, { color: colors.text }]} numberOfLines={2} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
-              {row.title}
-            </Text>
-            <Text style={[type.caption, { color: colors.textSecondary }]} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE_DENSE}>
-              {ticketMeta(row)}
-            </Text>
+        {canRank ? (
+          <Pressable
+            onPress={() => openLink(() => Linking.openURL(row.ticketUrl))}
+            accessibilityRole="link"
+            accessibilityLabel={label}
+            style={({ pressed }) => [styles.ticketMain, pressed && { opacity: 0.7 }]}
+          >
+            {content}
+          </Pressable>
+        ) : (
+          <View accessible accessibilityLabel={label} style={styles.ticketMain}>
+            {content}
           </View>
-        </Pressable>
+        )}
         {placeable ? <IconButton icon="arrow-up-down" label={`Place ${row.ticketId}`} size={22} onPress={() => openRank([row.ticketId])} /> : null}
       </View>
       {children}

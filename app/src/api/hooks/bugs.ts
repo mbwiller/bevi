@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { BugReportInput, BugReportSummary } from '@bevi/shared';
+import { isApiError, type BugReportInput, type BugReportSummary } from '@bevi/shared';
 
 import { REPORTER_SUPPORTED } from '@/features/bug-report/supported';
 
@@ -16,13 +16,32 @@ import { keys } from '../keys';
  * app is open. `enabled: false` (the root layout before sign-in finishes) asks
  * nothing and leaves `data` undefined.
  *
- * Off the web there is no reporter (features/bug-report/supported.ts): the answer
- * is false for every account and the server is not asked.
+ * Where there is no reporter (features/bug-report/supported.ts: anywhere but the web and
+ * iOS) the answer is false for every account and the server is not asked.
  */
 export function useCanReportBug({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: keys.canReportBug(),
     queryFn: () => (REPORTER_SUPPORTED ? api.bugs.canReport() : false),
+    enabled,
+    staleTime: Infinity,
+    // The gate answers false rather than throwing, so a retry buys nothing.
+    retry: false,
+  });
+}
+
+/**
+ * Whether this account may rank its tickets against each other ("which is worse?", Place): a
+ * founder's act, since it sets priority and place on the board's shared order. A tester reports
+ * but does not rank. It decides whether Place is offered; the server refuses a placement from
+ * anyone else whatever the app shows. Same options as `useCanReportBug`: cached for the session,
+ * not retried, and false without asking where there is no reporter. While it is loading, `data`
+ * is undefined: callers treat that as false.
+ */
+export function useCanRankBug({ enabled = true }: { enabled?: boolean } = {}) {
+  return useQuery({
+    queryKey: keys.canRankBug(),
+    queryFn: () => (REPORTER_SUPPORTED ? api.bugs.canRank() : false),
     enabled,
     staleTime: Infinity,
     // The gate answers false rather than throwing, so a retry buys nothing.
@@ -59,7 +78,8 @@ export function useMyBugReports(enabled = true) {
 /**
  * Moves one of the caller's tickets to Done after they checked the fix on the
  * device. The list is patched with the ticket the tracker returned and then
- * refetched.
+ * refetched. A 'conflict' (the ticket is no longer in review: someone moved it on
+ * the board) refetches the list too, so the row shows where it really is.
  */
 export function useMarkBugVerified() {
   const client = useQueryClient();
@@ -70,6 +90,9 @@ export function useMarkBugVerified() {
         rows?.map((r) => (r.ticketId === summary.ticketId ? summary : r)),
       );
       void client.invalidateQueries({ queryKey: keys.myBugReports() });
+    },
+    onError: (error: unknown) => {
+      if (isApiError(error) && error.code === 'conflict') void client.invalidateQueries({ queryKey: keys.myBugReports() });
     },
   });
 }

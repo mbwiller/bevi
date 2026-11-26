@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createBugsApi } from '../src/bugs.ts';
 
@@ -15,7 +15,7 @@ const KEY = '4f1d6c0a-4f4c-4f0e-9e0b-9a4a8f2b7c11';
 
 interface Calls {
   rpc?: string;
-  uploads: { bucket: string; path: string }[];
+  uploads: { bucket: string; path: string; body?: unknown }[];
   invokes: { name: string; init: { body?: Record<string, unknown>; method?: string } | undefined }[];
 }
 
@@ -48,9 +48,9 @@ function fakeClient(calls: Calls = newCalls(), options: Options = {}): SupabaseC
     },
     storage: {
       from: (bucket: string) => ({
-        upload: (path: string) => {
+        upload: (path: string, body?: unknown) => {
           const index = calls.uploads.length;
-          calls.uploads.push({ bucket, path });
+          calls.uploads.push({ bucket, path, body });
           const fails = options.uploadError && (options.uploadErrorAt === undefined || options.uploadErrorAt === index);
           return Promise.resolve({ data: { path }, error: fails ? options.uploadError : null });
         },
@@ -86,6 +86,19 @@ describe('bugs.canReport', () => {
 
     expect(await createBugsApi(fakeClient(newCalls(), { rpcData: true })).canReport()).toBe(true);
     expect(await createBugsApi(fakeClient(newCalls(), { rpcError: { message: 'permission denied' } })).canReport()).toBe(false);
+  });
+});
+
+describe('bugs.canRank', () => {
+  it('asks can_rank_bugs, and answers false rather than throwing for a tester or on any error', async () => {
+    const calls = newCalls();
+    expect(await createBugsApi(fakeClient(calls, { rpcData: false })).canRank()).toBe(false);
+    expect(calls.rpc).toBe('can_rank_bugs');
+
+    expect(await createBugsApi(fakeClient(newCalls(), { rpcData: true })).canRank()).toBe(true);
+    expect(await createBugsApi(fakeClient(newCalls(), { rpcError: { message: 'permission denied' } })).canRank()).toBe(false);
+    // Only a literal true admits: a database that answers something else is not a yes.
+    expect(await createBugsApi(fakeClient(newCalls(), { rpcData: 'true' })).canRank()).toBe(false);
   });
 });
 
@@ -387,6 +400,20 @@ describe('bugs.markVerified', () => {
     ).rejects.toMatchObject({ code: 'not_found' });
     await expect(createBugsApi(fakeClient(newCalls(), { invokeData: {} })).markVerified('BEV-1')).rejects.toMatchObject({ code: 'unknown' });
   });
+
+  it("maps the verify route's not_in_review to conflict, and leaves other 409s and tracker failures as they were", async () => {
+    const e = await createBugsApi(fakeClient(newCalls(), { invokeError: functionError(409, { error: 'not_in_review' }) }))
+      .markVerified('T-207')
+      .catch((x: unknown) => x);
+    expect(e).toMatchObject({ code: 'conflict', message: "That report isn't waiting for your check", detail: { reason: 'not_in_review' } });
+
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(502, { error: 'tracker_error', code: 'board_unreachable' }) })).markVerified('T-207'),
+    ).rejects.toMatchObject({ code: 'unknown' });
+    await expect(
+      createBugsApi(fakeClient(newCalls(), { invokeError: functionError(403, { error: 'not_internal' }) })).markVerified('T-207'),
+    ).rejects.toMatchObject({ code: 'unauthorized' });
+  });
 });
 
 describe('bugs.place', () => {
@@ -426,6 +453,13 @@ describe('bugs.place', () => {
     ).rejects.toMatchObject({ code: 'unauthorized' });
   });
 
+  it("maps the place route's not_allowed, for an account that may not rank, to unauthorized", async () => {
+    const e = await createBugsApi(fakeClient(newCalls(), { invokeError: functionError(403, { error: 'not_allowed', route: 'place' }) }))
+      .place('BEV-7', null)
+      .catch((x: unknown) => x);
+    expect(e).toMatchObject({ code: 'unauthorized', message: 'This account cannot rank reports', detail: { reason: 'not_allowed' } });
+  });
+
   it("maps the place route's own not-found to not_found", async () => {
     const e = await createBugsApi(fakeClient(newCalls(), { invokeError: functionError(404, { error: 'not_found', route: 'place' }) }))
       .place('BEV-7', 'BEV-2')
@@ -463,5 +497,63 @@ describe('bugs.place', () => {
     await expect(
       createBugsApi(fakeClient(newCalls(), { invokeError: functionError(400, { error: 'validation', field: 'afterTicketId' }) })).place('BEV-7', 'BEV-2'),
     ).rejects.toMatchObject({ code: 'validation', detail: { field: 'afterTicketId' } });
+  });
+});
+
+// Contract 3.3.0: evidence is an `UploadPayload`, as `media.upload`'s file is. The native bug
+// reporter reads its screenshot into bytes; a React Native Blob would store an empty object.
+describe('bugs.report evidence as bytes (contract 3.3.0)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('uploads a Uint8Array as an ArrayBuffer holding exactly its own bytes, not its backing store', async () => {
+    const calls = newCalls();
+    const backing = new Uint8Array([9, 9, 1, 2, 3, 9, 9]);
+    const view = backing.subarray(2, 5);
+    await createBugsApi(fakeClient(calls, { invokeData: CREATED })).report({
+      ...BASE,
+      evidence: [{ file: view, mimeType: 'image/jpeg', caption: 'Feed, whole screen' }],
+    });
+    const body = calls.uploads[0]?.body as ArrayBuffer;
+    expect(body).toBeInstanceOf(ArrayBuffer);
+    expect([...new Uint8Array(body)]).toEqual([1, 2, 3]);
+    expect(calls.invokes[0]?.init?.body?.evidenceCaptions).toEqual(['Feed, whole screen']);
+  });
+
+  it('uploads an ArrayBuffer as it is', async () => {
+    const calls = newCalls();
+    const bytes = new Uint8Array([4, 5, 6]).buffer;
+    await createBugsApi(fakeClient(calls, { invokeData: CREATED })).report({ ...BASE, evidence: [{ file: bytes, mimeType: 'image/png' }] });
+    expect(calls.uploads[0]?.body).toBe(bytes);
+    expect(calls.uploads[0]?.path).toMatch(/\.png$/);
+  });
+
+  it('measures bytes against the 10 MB limit', async () => {
+    const calls = newCalls();
+    await expect(
+      createBugsApi(fakeClient(calls)).report({ ...BASE, evidence: [{ file: new Uint8Array(10 * 1024 * 1024 + 1), mimeType: 'image/jpeg' }] }),
+    ).rejects.toMatchObject({ code: 'validation', detail: { field: 'evidence' } });
+    expect(calls.uploads).toEqual([]);
+  });
+
+  it('refuses a Blob under React Native before staging anything, even behind good bytes', async () => {
+    vi.stubGlobal('navigator', { product: 'ReactNative' });
+    const calls = newCalls();
+    const nativeBlob = new Blob(['x'], { type: 'image/jpeg' });
+    await expect(
+      createBugsApi(fakeClient(calls)).report({
+        ...BASE,
+        evidence: [
+          { file: new Uint8Array([1, 2, 3]), mimeType: 'image/jpeg' },
+          { file: nativeBlob, mimeType: 'image/jpeg' },
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: 'validation',
+      // The contract's field for an attachment `bugs.report` refuses, not `media.upload`'s 'file'.
+      detail: { field: 'evidence' },
+      message: expect.stringContaining('cannot upload a Blob'),
+    });
+    expect(calls.uploads).toEqual([]);
+    expect(calls.invokes).toEqual([]);
   });
 });

@@ -8,13 +8,14 @@ import { MAX_FONT_SCALE_DENSE, radius, size, spacing, type, useTheme } from '@/t
 
 import { BUTTON_SIZE, buttonBottom } from './ReportButton';
 import { REPORT_UI, useLayer } from './ReportLayer';
-import { hideToast, openRank, useReport } from './store';
+import { hideToast, openRank, sheetsAvailable, useReport } from './store';
 
 const TOAST_MS = 4000;
 
 /**
  * "Filed BEV-14", for about four seconds, just above the floating button. "Place it" starts ranking the ticket
- * when there is at least one other open ticket to compare it with.
+ * when there is at least one other open ticket to compare it with, and only for an account that may
+ * rank: the host's `canPlace` answers false for a tester (ReportHost, `bugs.canRank()`).
  */
 export function ReportToast({ canPlace }: { canPlace: (ticketId: string) => boolean }) {
   const { colors, elevation } = useTheme();
@@ -23,6 +24,8 @@ export function ReportToast({ canPlace }: { canPlace: (ticketId: string) => bool
   const keyboard = useKeyboardInset();
   const toast = useReport((s) => s.toast);
   const panelHeight = useReport((s) => (s.panel === 'open' && s.draft ? s.panelHeight : 0));
+  // Over a full-screen flow the rank sheet can't open (capabilities.ts), so the toast just says it was filed.
+  const sheets = useReport(sheetsAvailable);
 
   useEffect(() => {
     if (!toast) return;
@@ -36,7 +39,7 @@ export function ReportToast({ canPlace }: { canPlace: (ticketId: string) => bool
   // already has the keyboard taken out, and `bottom` is measured from under the keyboard.)
   const screen = Platform.OS === 'web' ? layer.height + keyboard : layer.height;
   const bottom = toastBottom(buttonBottom(insets.bottom, panelHeight) + BUTTON_SIZE + spacing.sm, screen, insets.top);
-  const place = toast.duplicate ? false : canPlace(toast.ticketId);
+  const place = toast.duplicate || !sheets ? false : canPlace(toast.ticketId);
   return (
     <View
       {...REPORT_UI}

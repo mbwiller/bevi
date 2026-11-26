@@ -213,7 +213,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       is_starter: row.is_starter,
     };
     // `mapNutrition` is what tolerates a snapshot stored before contract
-    // 3.1.0 added `source` (mappers.ts); the missing-table check above is
+    // 3.10.0 added `source` (mappers.ts); the missing-table check above is
     // what tolerates a backend with no `bev_nutrition` at all.
     return { ...mapBev(client, bevRow, {
       myRanking,

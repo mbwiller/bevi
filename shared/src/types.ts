@@ -11,6 +11,7 @@ import type {
   FlavorProfileSource,
   FlavorServe,
   IconStatus,
+  NotificationKind,
   PhotoStatus,
   PriceTier,
 } from './enums';
@@ -61,6 +62,15 @@ export type SuggestedProfile = ProfileRow & {
   followedBy: Profile[];
   /** How many there are in all, so `followedByCount - followedBy.length` is the "and N others". */
   followedByCount: number;
+};
+
+/**
+ * Someone the caller has blocked, from `blocks.list` (IS-7). Never the caller,
+ * so `birthdate` is null and `canSeeAlcohol` false, as for any other person.
+ */
+export type BlockedUser = Profile & {
+  /** When the caller blocked them. */
+  blockedAt: string;
 };
 
 export interface ProfileStats {
@@ -139,10 +149,16 @@ export interface BevLeaf {
  * A Bev's generated icon (`bevs.icons()`), the illustrated Bevi-style asset for
  * a custom Bev someone created with a photograph.
  *
- * It is NOT on `BevSummary`, deliberately: a summary arrives from about a dozen
- * RPCs and only some could carry it, so a field there would be null for
- * reasons that have nothing to do with whether the icon exists. One batch call
- * per screen answers for a whole list instead, exactly as `leaves()` does.
+ * No RPC returning a `BevSummary` carries any of this: a summary arrives from
+ * about a dozen of them and only some could, so a column there would be null
+ * for reasons that have nothing to do with whether the icon exists. This one
+ * batch call answers for a whole list instead, exactly as `leaves()` does, and
+ * `@bevi/api` uses it to fill `BevSummary.iconUrl` for every list it returns,
+ * so a caller that only wants to DRAW the icon needs nothing from here.
+ *
+ * Call it directly for what a URL cannot say: whether a generation is pending,
+ * processing or failed, which of the two kinds of icon the Bev ended up with,
+ * and the catalogue icon it may borrow until its own arrives.
  *
  * `generatedIconUrl` is set only when `iconStatus` is `'completed'`. An id the caller
  * cannot see is OMITTED from the result, so a short result is normal; a Bev
@@ -242,16 +258,43 @@ export interface BevSummary {
   flavor: string | null;
   categoryId: CategoryId;
   /**
-   * The Bev's photo; null until one exists. A Bev's image is photo > icon >
-   * category art, so with none, draw `iconUrl`, and with neither, `BevArt`.
+   * The Bev's photo; null until one exists. A Bev's image is icon > photo >
+   * category art, so with no `iconUrl`, draw this, and with neither, `BevArt`.
+   *
+   * The icon comes first because an icon is what a Bev looks like on Bevi. A
+   * seeded Bev has no photo at all, so this only decides the image for a Bev
+   * someone created from a photograph, and there the generated icon is the
+   * point: the photograph is what made it.
    */
   photoUrl: string | null;
   /**
-   * The Bev's authored icon (drawn art, not a photo), a public URL in the
-   * `bev-icons` bucket; null when it has none. Shown only when `photoUrl` is
-   * null.
+   * The Bev's own icon (drawn art, not a photo), or null when it has none:
+   *
+   * - the **generated** illustration when the Bev has one, a raster PNG in the
+   *   public `bev-generated-icons` bucket, made from its creator's photograph;
+   * - otherwise the **authored** catalogue icon, an SVG in `bev-icons`
+   *   published from `design/beverage-icons/manifest.json`.
+   *
+   * Which kind it is does not change how it is drawn, which is the point: a
+   * created icon takes the same slot as a catalogue one, everywhere. When it
+   * matters, `bevs.icons()` still answers with the two apart, plus the
+   * generation's status.
+   *
+   * A catalogue icon this Bev merely *borrows* (`BevIcon.fallbackIconUrl`) is
+   * NOT folded in here: a Bev whose icon is still being made shows its
+   * creator's photograph, not another drink's art.
    */
   iconUrl: string | null;
+  /**
+   * Where the drink's label sits on `iconUrl`, normalised 0-1, so the caller
+   * can draw the wordmark across it from this Bev's own `brand` / `name`.
+   *
+   * Set only for a generated icon that has a label band; null for an authored
+   * catalogue icon, whose lettering is already drawn into the SVG, and null
+   * for a drink with no label band at all (a cafe latte, a homemade smoothie).
+   * See `BevIcon.labelBand` for why the lettering is not in the image.
+   */
+  iconLabelBand: BevIconLabelBand | null;
   photoStatus: PhotoStatus;
   /** Always set on reads: when the creator chose "not sure" the server estimates it. */
   priceTier: PriceTier;
@@ -354,8 +397,14 @@ export interface Ranking {
   updatedAt: string;
 }
 
-/** A ranking with the Bev it ranks: Bev'd list rows and profile Activity posts. */
-export type RankedBev = Ranking & { bev: BevSummary };
+/**
+ * A ranking with the Bev it ranks: Bev'd list rows and profile Activity posts.
+ *
+ * `venue` (contract 3.5.0) is where the user had it, or null when they did
+ * not say. It belongs to the user's ranking of the Bev rather than to this
+ * row, so it survives a re-rank untouched.
+ */
+export type RankedBev = Ranking & { bev: BevSummary; venue: Venue | null };
 
 /**
  * One answer from the placement flow, structurally identical to
@@ -405,6 +454,13 @@ export interface FeedItem {
   alsoBevdBy: FriendScore[];
   /** The total behind `alsoBevdBy`, so it is never less than `alsoBevdBy.length`. */
   alsoBevdCount: number;
+  /**
+   * Where the actor had this Bev (contract 3.5.0), or null when they did not
+   * say. Anyone who may see the post may see this, so an `ExplorePost` has it
+   * too. It is the place on the actor's ranking today, not a snapshot from
+   * when the post was written: changing it changes every post about that Bev.
+   */
+  venue: Venue | null;
 }
 
 export interface Comment {
@@ -537,15 +593,126 @@ export interface BucketBev {
   brandKey: string | null;
 }
 
+/**
+ * The backend's version gate and maintenance flag, as `meta.getAppConfig`
+ * returns it: the single `app_config` row (IA-2), which only an operator can
+ * write. It is how the backend tells a binary it cannot redeploy "update" or
+ * "we are down on purpose", so it is readable signed out.
+ *
+ * Both versions are plain `x.y.z` semver strings (three non-negative integers,
+ * no prefix, no pre-release tag). Compare them part by part as numbers, never
+ * as strings: '0.10.0' is above '0.9.0'. A floor of '0.0.0' gates nobody, and
+ * is what both are seeded with.
+ */
 export interface AppConfig {
+  /**
+   * The lowest app version still allowed to use this backend, `x.y.z`. Compare
+   * it with the INSTALLED binary's version; a build below it must update.
+   */
   minAppVersion: string;
+  /**
+   * The lowest `CONTRACT_VERSION` the backend still serves, `x.y.z`. Compare it
+   * with the `CONTRACT_VERSION` the client was built against; a client below
+   * it would be handed responses it cannot parse, so it must update too.
+   */
+  minContractVersion: string;
+  /** Planned downtime: true means show the maintenance screen instead of the app. */
   maintenance: boolean;
+  /**
+   * What to show while `maintenance` is true: one sentence, at most 280
+   * characters, e.g. "Back by 9pm ET." Null when there is none, and the client
+   * uses its own wording. Carries no meaning while `maintenance` is false.
+   */
+  maintenanceMessage: string | null;
 }
 
 export interface Page<T> {
   items: T[];
   nextCursor: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Notifications (T-31, contract 3.7.0)
+// ---------------------------------------------------------------------------
+
+/** The comment a 'comment' notification is about, as it reads now. */
+export interface NotificationComment {
+  /** `Comment.id`. */
+  id: string;
+  body: string;
+}
+
+/**
+ * One row of the notifications inbox, from `notifications.list`: someone
+ * followed the caller, or liked or commented on one of the caller's posts.
+ *
+ * Likes on one post share a row ("ana and 2 others liked your Coke"); a
+ * follow and a comment are a row each. Every row is checked against what is
+ * true NOW, not when it happened: an unfollow, an unlike, a deleted comment or
+ * a block in either direction hides it, and a post that is gone takes its
+ * likes and comments with it.
+ */
+export interface Notification {
+  /**
+   * The newest notification in the row. Rows are ordered by it, newest first,
+   * and it is the cursor `notifications.markRead(upToId)` takes: pass the
+   * first row's id to mark everything on screen read. A new like on an older
+   * post gives that post's row a new id, which moves it back to the top.
+   */
+  id: string;
+  kind: NotificationKind;
+  /** When the newest notification in the row happened. */
+  createdAt: string;
+  /** Whether any notification in the row is unread. */
+  unread: boolean;
+  /**
+   * Who did it, newest first: at most two, and exactly one for a follow or a
+   * comment. `isFollowing` is whether the caller follows them, so a follow
+   * row can offer "Follow back". Never the caller.
+   */
+  actors: ProfileRow[];
+  /**
+   * How many people the row is about, so `actorCount - actors.length` is the
+   * "and N others". Never less than `actors.length`; 1 for a follow or a
+   * comment.
+   */
+  actorCount: number;
+  /** The post liked or commented on (`FeedItem.id`, for `feed.getPost`); null for a follow. */
+  postId: string | null;
+  /** That post's Bev; null for a follow. */
+  bev: BevSummary | null;
+  /** The comment, on a 'comment' row; null on the others. */
+  comment: NotificationComment | null;
+}
+
+/**
+ * The caller's push switches (T-31 Release 2, contract 3.8.0), from
+ * `notifications.getSettings`. A push is sent only when `paused` is false AND
+ * that kind's switch is on. Pausing never changes the four switches, so
+ * un-pausing restores exactly what was on. Defaults: not paused; `follows`,
+ * `likes` and `comments` on; `posts` off.
+ */
+export interface NotificationSettings {
+  /** Every push off, the four switches kept as they are. */
+  paused: boolean;
+  /** Someone followed the caller. */
+  follows: boolean;
+  /** Someone liked one of the caller's posts. */
+  likes: boolean;
+  /** Someone commented on one of the caller's posts. */
+  comments: boolean;
+  /** Someone the caller chose (`notifications.setPostNotification`) posted a Bev. */
+  posts: boolean;
+}
+
+/**
+ * Someone the caller follows, from `notifications.listPostNotificationPeople`:
+ * `subscribed` is whether a push is on for their new posts. `isFollowing` is
+ * always true, as every row is someone the caller follows.
+ */
+export type PostNotificationPerson = ProfileRow & {
+  subscribed: boolean;
+};
 
 // ---------------------------------------------------------------------------
 // Venues (S-10 + A-08)
@@ -577,6 +744,15 @@ export interface LatLngBounds {
 
 export type VenueKind = 'chain' | 'craft';
 
+/**
+ * What kind of place a venue is (contract 3.5.0), for the glyph on a map pin
+ * and a picker row: a cafe, a store (convenience, grocery, pharmacy, deli), a
+ * bar, a liquor shop, a restaurant, or 'other' when nothing has said. `kind`
+ * cannot stand in for it: a Starbucks and a Duane Reade are both chains.
+ */
+export type PlaceType = 'cafe' | 'store' | 'bar' | 'liquor' | 'restaurant' | 'other';
+export const PLACE_TYPES: readonly PlaceType[] = ['cafe', 'store', 'bar', 'liquor', 'restaurant', 'other'];
+
 export type Borough = 'Manhattan' | 'Brooklyn' | 'Queens' | 'Bronx' | 'Staten Island';
 
 /**
@@ -588,6 +764,11 @@ export interface Venue {
   id: string;
   name: string;
   kind: VenueKind;
+  /**
+   * Contract 3.5.0. 'other' for a venue nothing has typed yet, and on the
+   * parked venue map's reads (`inView`, `get`), which predate it.
+   */
+  placeType: PlaceType;
   lat: number;
   lng: number;
   address: string | null;
@@ -657,6 +838,77 @@ export interface VenueFilters {
   openNow?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Where a Bev was had (contract 3.5.0)
+// ---------------------------------------------------------------------------
+
+/** A position on the Earth, in degrees. */
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+/** One result of `venues.search`. */
+export interface VenueMatch {
+  venue: Venue;
+  /** From the `near` position that was given, rounded to a metre; null when none was. */
+  distanceMeters: number | null;
+}
+
+/**
+ * A place Bevi does not have yet, as `venues.searchMore` finds it. It is not a
+ * `Venue` and has no Bevi id: pass `placeId` to `venues.addPlace` to make it
+ * one. Show it, do not keep it.
+ */
+export interface ExternalPlace {
+  placeId: string;
+  name: string;
+  /** What the outside directory says the place is, as it will be saved by `addPlace`. */
+  placeType: PlaceType;
+  address: string | null;
+  lat: number;
+  lng: number;
+  distanceMeters: number | null;
+}
+
+/**
+ * Whose Bevs a map read covers: the caller's, those of the people the caller
+ * follows, or both.
+ */
+export type BevdScope = 'mine' | 'friends' | 'all';
+
+/** One pin on the map of where Bevs were had: a venue and how much happened there. */
+export interface BevdPin {
+  venue: Venue;
+  /** Rankings in scope with this venue. Always at least 1. Two people's Coke is two. */
+  bevCount: number;
+  /** How many of those are the caller's own, so `bevCount - mineCount` is the friends'. */
+  mineCount: number;
+  /** When the most recent of them was ranked. */
+  latestAt: string;
+}
+
+/** One ranking behind a pin: who had what there. */
+export interface BevdHere {
+  user: Profile;
+  ranking: RankedBev;
+}
+
+/** Everything in scope that was had at one venue, the most recent first. */
+export interface BevdAtVenue {
+  venue: Venue;
+  /** Never empty. */
+  items: BevdHere[];
+}
+
+/** How much of the caller's Bev'd list says where. */
+export interface BevLocationSummary {
+  rankedCount: number;
+  /** Never more than `rankedCount`. */
+  locatedCount: number;
+}
+
+
 /**
  * Where a nutrition snapshot's numbers came from. Both are user-confirmed, and
  * neither is a verified transcription of the package:
@@ -703,4 +955,31 @@ export interface NutritionPreview {
    * to `openfoodfacts`, which is what they all are.
    */
   source: NutritionSource;
+}
+
+/**
+ * What a barcode lookup knows about the product, for filling in a new Bev's
+ * details (contract 3.4.0). Every field but `barcode` is null when the provider
+ * does not list it: a null is never replaced with a guess, and the person
+ * checks and can change whatever was filled in before creating the Bev. Flavor
+ * and price are not here because the provider has neither.
+ */
+export interface BarcodeProduct {
+  barcode: string;
+  /**
+   * The product's name as the provider lists it, tidied to fit a Bev: whitespace
+   * collapsed, cut to a Bev name's length, all capitals put in title case.
+   */
+  name: string | null;
+  /** The first brand the provider lists, tidied the same way. */
+  brand: string | null;
+  /**
+   * The Bevi category the provider's own categories map to. It can be an
+   * alcoholic one, whoever asks: the lookup is callable signed out and does not
+   * know the viewer, so a caller must not offer a category the viewer cannot
+   * see (`bevs.create` refuses it with 'age_restricted' either way).
+   */
+  categoryId: CategoryId | null;
+  /** null when the product has no usable nutrition data. */
+  nutrition: NutritionPreview | null;
 }

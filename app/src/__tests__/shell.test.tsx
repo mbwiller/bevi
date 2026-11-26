@@ -2,7 +2,10 @@ import path from 'path';
 
 import { act, fireEvent, renderRouter, screen, waitFor, within } from 'expo-router/testing-library';
 
+import * as Notifications from 'expo-notifications';
+
 import { api } from '@/api/client';
+import * as push from '@/features/notifications/push/push';
 import { useSession, type SessionStatus } from '@/state/session';
 import { controls } from '@/testing/fakeApi';
 
@@ -84,7 +87,13 @@ describe('the bug reporter, for an internal reporter', () => {
     await start('ready', '/feed');
     expect(await screen.findByRole('button', { name: 'Report' })).toBeTruthy();
     const header = screen.getByLabelText('Find people').parent!;
-    expect(within(header).getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual(['Find people']);
+    // The bell, then Find people (T-31). The fixture inbox has three unread rows, so the bell says so.
+    await waitFor(() =>
+      expect(within(header).getAllByRole('button').map((b) => b.props.accessibilityLabel)).toEqual([
+        'Notifications, 3 unread',
+        'Find people',
+      ]),
+    );
     expect(screen.queryByLabelText('Report a bug')).toBeNull();
   });
 
@@ -243,6 +252,48 @@ describe('tab bar', () => {
     expect(path()).toBe('/feed');
   });
 
+  it("Feed's bell opens Notifications, which keeps the bar with Feed marked", async () => {
+    signInFake();
+    const path = await start('ready', '/feed');
+    await fireEvent.press(await screen.findByRole('button', { name: 'Notifications, 3 unread' }));
+    expect(await screen.findByRole('heading', { name: 'Notifications' })).toBeTruthy();
+    expect(path()).toBe('/notifications');
+    expectFeedMarkedOnFiveTabs();
+  });
+
+  it('/notifications keeps the bar, with Feed marked and still five tabs (design system ScreenNotifications)', async () => {
+    signInFake();
+    const path = await start('ready', '/notifications');
+    expect(await screen.findByRole('heading', { name: 'Notifications' })).toBeTruthy();
+    expect(path()).toBe('/notifications');
+    expectFeedMarkedOnFiveTabs();
+  });
+
+  it("Notifications' back returns to the Feed, whose bell has no count now", async () => {
+    signInFake();
+    const path = await start('ready', '/feed');
+    await fireEvent.press(await screen.findByRole('button', { name: 'Notifications, 3 unread' }));
+    await screen.findByRole('heading', { name: 'Notifications' });
+    // Opened and read: the rows are in, and marking them read has reached the server.
+    await screen.findByLabelText('Unread. friend_e started following you, 10 minutes ago');
+    await waitFor(async () => expect(await api.notifications.unreadCount()).toBe(0));
+    await fireEvent.press(screen.getByRole('button', { name: 'Back' }));
+    await waitFor(() => expect(path()).toBe('/feed'));
+    expect(screen.queryByRole('heading', { name: 'Notifications' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Notifications' })).toBeTruthy();
+  });
+
+  it.each([
+    ['signedOut', '/sign-in', 'Create account'],
+    ['onboarding', '/onboarding/profile', 'Your profile'],
+  ] as const)('/notifications and /post are out of reach when %s', async (status, pathname, text) => {
+    for (const url of ['/notifications', '/post/abc']) {
+      const path = await start(status, url);
+      expect((await screen.findAllByText(text)).length).toBeGreaterThan(0);
+      expect(path()).toBe(pathname);
+    }
+  });
+
   it.each([
     ['signedOut', '/sign-in', 'Create account'],
     ['onboarding', '/onboarding/profile', 'Your profile'],
@@ -279,6 +330,62 @@ describe('tab bar', () => {
   });
 });
 
+// T-31 Release 2: push is built but off until the build can receive it (`extra.push`, which jest's
+// app config does not set). The whole app, signed in, behaves as it did before push existed.
+describe('push, with the gate off', () => {
+  const WRAPPER = [
+    'getPushPermission',
+    'requestPushPermission',
+    'getPushToken',
+    'setAppBadge',
+    'configureForegroundPresentation',
+    'onPushReceived',
+    'onPushOpened',
+    'openSystemSettings',
+  ] as const;
+  const NATIVE = [
+    'getPermissionsAsync',
+    'requestPermissionsAsync',
+    'getExpoPushTokenAsync',
+    'setBadgeCountAsync',
+    'setNotificationHandler',
+    'addNotificationReceivedListener',
+    'addNotificationResponseReceivedListener',
+    'getLastNotificationResponse',
+  ] as const;
+  let spies: jest.SpyInstance[];
+  beforeEach(() => {
+    signInFake();
+    spies = [...WRAPPER.map((name) => jest.spyOn(push, name)), ...NATIVE.map((name) => jest.spyOn(Notifications, name))];
+  });
+  afterEach(() => {
+    jest.restoreAllMocks();
+    controls.resetToFixtures();
+  });
+
+  it('Settings has no Notifications row, and nothing push is called', async () => {
+    await start('ready', '/settings');
+    await screen.findByText('Account');
+    expect(screen.queryByLabelText('Notifications')).toBeNull();
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('the inbox has no gear and no ask, and nothing push is called', async () => {
+    const path = await start('ready', '/notifications');
+    await screen.findByLabelText('Unread. friend_e started following you, 10 minutes ago');
+    expect(screen.queryByRole('button', { name: 'Notification settings' })).toBeNull();
+    expect(screen.queryByTestId('notifications-ask')).toBeNull();
+    expect(path()).toBe('/notifications');
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('a link to Settings > Notifications lands on Settings', async () => {
+    const path = await start('ready', '/settings/notifications');
+    await screen.findByText('Account');
+    expect(path()).toBe('/settings');
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+  });
+});
 
 describe('standalone nutrition demo', () => {
   it('opens the scanner while signed out when explicitly enabled', async () => {

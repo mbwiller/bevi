@@ -28,16 +28,22 @@
       "extends": "base",
       "distribution": "store",
       "environment": "preview",
+      "channel": "preview",
       "autoIncrement": true
     },
     "production": {
       "extends": "base",
       "distribution": "store",
       "environment": "production",
+      "channel": "production",
       "autoIncrement": true
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6836079118"
+      }
+    }
   }
 }

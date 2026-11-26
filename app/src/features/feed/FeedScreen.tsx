@@ -6,18 +6,21 @@ import { useCallback, useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { flattenPages, restartExplore, useFeed, useStats } from '@/api/hooks';
+import { flattenPages, restartExplore, useFeed, useStats, useUnreadNotificationCount } from '@/api/hooks';
 import { keys } from '@/api/keys';
+import { Announce } from '@/components/Announce';
 import { Arrive, useArrival } from '@/components/Arrive';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
-import { Header } from '@/components/Header';
+import { Header, type HeaderAction } from '@/components/Header';
 import { SearchBar } from '@/components/SearchBar';
 import { SegmentedTabs } from '@/components/SegmentedTabs';
 import { Skeleton } from '@/components/Skeleton';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
 import { spacing, type, useTheme } from '@/theme';
 
 import { BevOfPeriod } from './BevOfPeriod';
+import { SafetyFlow } from '../safety/SafetyFlow';
 import { PostCommentsSheet } from './PostCommentsSheet';
 import { POST_GONE, useFeedPostActions } from './useFeedPostActions';
 import { useExplorePosts } from './useExplorePosts';
@@ -26,6 +29,8 @@ import { useExplorePosts } from './useExplorePosts';
 export { POST_GONE };
 
 const SEARCH_PLACEHOLDER = 'Search a Bev or a person';
+/** The bell's badge stops counting here; its spoken name still says the whole count. */
+const MAX_BADGE = 99;
 
 export type FeedSegment = 'feed' | 'explore';
 
@@ -53,7 +58,7 @@ function PostSkeletons({ count }: { count: number }) {
 }
 
 /**
- * Feed (§6.4): the filled search bar (opens the Search tab with its panel up), Bev of the day and week (M-05), then the
+ * Feed (§6.4): the header's bell (Notifications, with the unread count) and Find people, the filled search bar (opens the Search tab with its panel up), Bev of the day and week (M-05), then the
  * "Your feed · Explore" tabs (`?segment=explore`, M-04).
  *
  * Your feed: followed users' rankings, newest first, 20 per page, each with a heart (tap it, or
@@ -71,7 +76,7 @@ export function FeedScreen() {
   const exploring = segment === 'explore';
   const stats = useStats();
   const feed = useFeed();
-  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice } = useFeedPostActions();
+  const { renderItem: renderPost, commentsFor, closeComments, postGone, notice, safety: postSafety } = useFeedPostActions();
   const explore = useExplorePosts(exploring);
   const { renderItem: renderExplore } = explore;
   const qc = useQueryClient();
@@ -102,6 +107,22 @@ export function FeedScreen() {
   const followingNobody = stats.data?.following === 0;
 
   const findPeople = useCallback(() => router.push('/people'), [router]);
+
+  // The bell (T-31): the unread count as a badge (none at 0, while loading or after a failed read),
+  // and said in its name, since the badge itself is not read out.
+  const unread = useUnreadNotificationCount().data ?? 0;
+  const actions = useMemo<HeaderAction[]>(
+    () => [
+      {
+        icon: 'bell',
+        label: unread > 0 ? `Notifications, ${unread} unread` : 'Notifications',
+        badge: unread > 0 ? Math.min(unread, MAX_BADGE) : undefined,
+        onPress: () => router.push('/notifications'),
+      },
+      { icon: 'user-plus', label: 'Find people', onPress: findPeople },
+    ],
+    [unread, router, findPeople],
+  );
 
   const followPrompt = (
     <EmptyState
@@ -183,21 +204,17 @@ export function FeedScreen() {
       if (xq.hasNextPage && !xq.isFetching && !xq.isFetchNextPageError) void xq.fetchNextPage();
     } else if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
   };
-  const refreshing = exploring
-    ? xq.isRefetching && !xq.isFetchingNextPage && !xq.isPending
-    : feed.isRefetching && !feed.isFetchingNextPage && !feed.isPending;
-  const onRefresh = () => {
-    if (exploring) void restartExplore(qc);
-    else {
-      void feed.refetch();
-      void stats.refetch();
-    }
-    void qc.invalidateQueries({ queryKey: keys.bevOfPeriod() });
-  };
+  const { refreshing, onRefresh } = usePullToRefresh(() =>
+    Promise.all([
+      exploring ? restartExplore(qc) : Promise.all([feed.refetch(), stats.refetch()]),
+      qc.invalidateQueries({ queryKey: keys.bevOfPeriod() }),
+    ]),
+  );
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
-      <Header wordmark actions={[{ icon: 'user-plus', label: 'Find people', onPress: findPeople }]} />
+      <Header wordmark actions={actions} />
+      <Announce text={notice} />
       {notice ? (
         <Text style={[type.body, styles.notice, { color: colors.textSecondary }]} role="alert" accessibilityLiveRegion="polite">
           {notice}
@@ -218,6 +235,8 @@ export function FeedScreen() {
         onRefresh={onRefresh}
       />
       <PostCommentsSheet eventId={commentsFor} onClose={closeComments} onGone={postGone} />
+      <SafetyFlow {...postSafety} />
+      <SafetyFlow {...explore.safety} />
     </SafeAreaView>
   );
 }

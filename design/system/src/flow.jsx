@@ -161,6 +161,39 @@ export function PriceTierPicker({ value, estimated = false, onChange, className 
   );
 }
 
+/** The most go-tos a person picks (the contract's `MAX_CATEGORY_PICKS`); `rank` runs 1 to this. */
+const MAX_PICKS = 3;
+
+/** A PickTile's accessible name: the label, then its place once picked, or why it can't be picked. */
+export function pickTileLabel(label, rank, disabled) {
+  if (rank) return label + ', your number ' + rank + ' pick';
+  return disabled ? label + ". You've picked " + MAX_PICKS + ' already' : label;
+}
+
+/**
+ * One category in onboarding's go-tos grid: a Bev's art (BevImage 56) over the category's label. Picked,
+ * it takes `primaryTint` with a 2pt `primary` rim and its `rank` (the order it was tapped in) in a `primary`
+ * badge; `disabled` dims an unpicked tile once three are picked. The badge pops in when a tap picks it.
+ */
+export function PickTile({ label, src, art, rank, disabled = false, onClick, className }) {
+  const [pop, setPop] = React.useState(0);
+  const picked = rank != null;
+  return (
+    <button
+      type="button"
+      className={cx('bv', 'bv-pick', 'bv-press', picked && 'bv-pick-on', disabled && 'bv-pick-dim', className)}
+      disabled={disabled}
+      aria-pressed={picked}
+      aria-label={pickTileLabel(label, rank, disabled)}
+      onClick={() => { if (!picked) setPop((n) => n + 1); if (onClick) onClick(); }}
+    >
+      <span className="bv-pick-art" aria-hidden="true"><BevImage size={56} src={src} art={art} /></span>
+      <span className="body bv-pick-label">{label}</span>
+      {picked ? <span key={pop} className={cx('bv-pick-badge', pop > 0 && 'bv-pop')} aria-hidden="true">{rank}</span> : null}
+    </button>
+  );
+}
+
 /**
  * Gut-check choice: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label.
  * The level carries the order, so it never leans on colour. The chosen one gets a check badge; pass `dimmed`
@@ -231,17 +264,18 @@ export function ErrorState({ title = "Couldn't load this", message = 'Check your
 export const COMMENT_MAX = 280;
 
 /**
- * The post's comments in a 90% Sheet: oldest at the top and newest just above the composer, like a chat.
+ * The post's comments in a Sheet that opens at 60% and expands to the whole screen: oldest at the top and
+ * newest just above the composer, like a chat.
  * Each comment: Avatar 32, bold handle, the text, a relative time; your own add a Delete. The composer
  * ("Add a comment…" and a `primary` Post) stays pinned to the bottom.
  */
-export function CommentsSheet({ open = true, comments = [], me, onClose, onPost, onDelete, error, className }) {
+export function CommentsSheet({ open = true, comments = [], me, onClose, onPost, onDelete, onMore, error, children, className }) {
   const [draft, setDraft] = React.useState('');
   const body = draft.trim();
   const left = COMMENT_MAX - draft.length;
   const post = () => { if (!body || left < 0) return; if (onPost) onPost(body); setDraft(''); };
   return (
-    <Sheet open={open} title="Comments" snap={90} onClose={onClose} className={cx('bv-comments', className)}>
+    <Sheet open={open} title="Comments" snap={60} expand onClose={onClose} className={cx('bv-comments', className)}>
       {comments.length ? (
         <ul className="bv-comment-list">
           {comments.map((c, i) => (
@@ -252,6 +286,7 @@ export function CommentsSheet({ open = true, comments = [], me, onClose, onPost,
                 <p className="body bv-comment-body">{c.body}</p>
               </div>
               {c.mine ? <button type="button" className="body bv-comment-delete" onClick={() => onDelete && onDelete(c.id)} aria-label={'Delete your comment: ' + c.body}>Delete</button> : null}
+              {!c.mine && onMore ? <IconButton icon="ellipsis" size={24} label={'More actions, comment by @' + (c.author && c.author.handle)} onClick={() => onMore(c)} className="bv-comment-more" /> : null}
             </li>
           ))}
         </ul>
@@ -265,6 +300,7 @@ export function CommentsSheet({ open = true, comments = [], me, onClose, onPost,
         <button type="submit" className="body bv-composer-post" disabled={!body || left < 0}>Post</button>
       </form>
       {error ? <p className="caption bv-field-errmsg bv-composer-error" role="alert">{error}</p> : null}
+      {children}
     </Sheet>
   );
 }
@@ -307,11 +343,17 @@ export function CollectionSheet({ open = true, rows = [], onClose, onSelect, cla
   );
 }
 
-/** Bottom sheet with a handle; snaps to 40% or 90% of its container. Fills the nearest positioned ancestor. */
-export function Sheet({ open = true, title, snap = 40, onClose, children, className }) {
+/**
+ * Bottom sheet with a handle; snaps to 40%, 60% or 90% of its container. Fills the nearest positioned ancestor.
+ * `expand`: in the app its top also drags up to the whole screen and back (README); here it is drawn at `snap`.
+ */
+export function Sheet({ open = true, title, snap = 40, expand, onClose, onClosed, children, className }) {
+  // `onClosed`: once the sheet is gone (here, as soon as `open` turns false).
+  const wasOpen = React.useRef(open);
+  React.useEffect(() => { if (wasOpen.current && !open && onClosed) onClosed(); wasOpen.current = open; }, [open, onClosed]);
   if (!open) return null;
   return (
-    <div className={cx('bv', 'bv-sheet-wrap', className)}>
+    <div className={cx('bv', 'bv-sheet-wrap', className)} data-expand={expand ? '' : undefined}>
       <div className="bv-sheet-scrim" onClick={onClose} aria-hidden="true" />
       <div className="bv-sheet" role="dialog" aria-modal="true" aria-label={title} style={{ height: snap + '%' }}>
         <span className="bv-sheet-handle" aria-hidden="true" />

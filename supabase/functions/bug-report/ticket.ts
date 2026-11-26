@@ -29,3 +29,22 @@ export function ticketNumber(identifier: string): number | null {
   const m = /^[A-Z][A-Z0-9]*-(\d{1,9})$/.exec(identifier.trim());
   return m ? Number(m[1]) : null;
 }
+
+/**
+ * Where the board says `identifier` is, among `statuses` read fresh for the
+ * verify route; "unknown" when the board did not describe it. The comparison
+ * is case-blind because the board client upper-cases the names it asks for.
+ */
+export function stateOf(statuses: readonly TicketStatus[], identifier: string): TicketState {
+  const wanted = identifier.trim().toUpperCase();
+  return statuses.find((s) => s.identifier.toUpperCase() === wanted)?.state ?? "unknown";
+}
+
+/**
+ * Whether "Verified on device" may close a ticket in this state: only once it
+ * is In review, i.e. a fix exists and waits for whoever filed it to try it.
+ * Anything earlier has nothing to verify, and anything later is already closed.
+ */
+export function isAwaitingCheck(state: TicketState): boolean {
+  return state === "in_review";
+}

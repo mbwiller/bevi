@@ -1,60 +1,97 @@
-import { useEffect, useRef } from 'react';
-import { loadBarcodeReader } from './barcodeReader';
-import { radius, useTheme } from '@/theme';
+import { CameraView, useCameraPermissions, type BarcodeScanningResult } from 'expo-camera';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Button } from '@/components/Button';
+import { Icon } from '@/components/Icon';
+import { radius, spacing, type, useTheme } from '@/theme';
+import { CAMERA_OPEN_FAILED, normalizeBarcode } from './barcodeCommon';
+import { BARCODE_CAMERA_DENIED, OPEN_SETTINGS, OPEN_SETTINGS_LABEL } from './copy';
 
-/** DOM island: Safari needs playsInline; ZXing also works where BarcodeDetector is absent. */
+/** Retail symbologies only, the ones the web scanner accepts (barcodeCommon.ts). */
+const BARCODE_TYPES = ['ean13', 'ean8', 'upc_a'] as const;
+const SCANNER_SETTINGS = { barcodeTypes: [...BARCODE_TYPES] };
+
+function openSettings() {
+  void Linking.openSettings().catch(() => undefined);
+}
+
+/**
+ * The native scanner: expo-camera's CameraView reads barcodes on the device (AVFoundation). The
+ * camera permission is a state shown here, not an exception: asked once when the scanner opens, and
+ * a refusal is a line with an Open Settings button. The web scanner is BarcodeCamera.web.tsx.
+ */
 export function BarcodeCamera({ onBarcode, onError }: { onBarcode: (code: string) => void; onError: (message: string) => void }) {
-  const video = useRef<HTMLVideoElement>(null);
+  const { colors } = useTheme();
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanning, setScanning] = useState(true);
   const handlers = useRef({ onBarcode, onError });
   handlers.current = { onBarcode, onError };
-  const { colors } = useTheme();
+  // Set synchronously on the first accepted scan: the camera fires its callback many times a second.
+  const done = useRef(false);
+  const mounted = useRef(true);
+  const asked = useRef(false);
   useEffect(() => {
-    let cancelled = false;
-    let stream: MediaStream | undefined;
-    let controls: { stop(): void } | undefined;
-    const stop = () => {
-      cancelled = true;
-      controls?.stop();
-      stream?.getTracks().forEach((track) => track.stop());
-      if (video.current) video.current.srcObject = null;
-    };
-    const pause = () => {
-      stop();
-      handlers.current.onError('Camera paused. Tap Scan barcode to try again.');
-    };
-    const visibility = () => { if (document.hidden) pause(); };
-    document.addEventListener('visibilitychange', visibility);
-    window.addEventListener('pagehide', pause);
-    window.addEventListener('popstate', pause);
-    void (async () => {
-      try {
-        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera unavailable');
-        // Own the stream so closing during permission or video setup always releases it.
-        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
-        if (cancelled) { stop(); return; }
-        const reader = await loadBarcodeReader();
-        if (cancelled || !video.current) { stop(); return; }
-        controls = await reader.decodeFromStream(stream, video.current, (result, _error, scanner) => {
-          if (cancelled || !result) return;
-          const code = result.getText();
-          if (!/^(?:\d{8}|\d{12}|\d{13})$/.test(code)) return;
-          scanner.stop();
-          stop();
-          handlers.current.onBarcode(code);
-        });
-        if (cancelled) stop();
-      } catch {
-        if (cancelled) return;
-        stop();
-        handlers.current.onError('Could not open the camera. Allow camera access, enter the barcode below, or upload a label photo.');
-      }
-    })();
-    return () => {
-      stop();
-      document.removeEventListener('visibilitychange', visibility);
-      window.removeEventListener('pagehide', pause);
-      window.removeEventListener('popstate', pause);
-    };
+    mounted.current = true;
+    return () => { mounted.current = false; };
   }, []);
-  return <video ref={video} autoPlay muted playsInline aria-label="Point the rear camera at the product barcode" style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'contain', borderRadius: radius.photo, background: colors.input }} />;
+  useEffect(() => {
+    if (!permission || permission.granted || !permission.canAskAgain || asked.current) return;
+    asked.current = true;
+    void requestPermission().catch(() => undefined);
+  }, [permission, requestPermission]);
+  // A device with no camera (the simulator): iOS has no availability call, so only a definite "no"
+  // counts; a throw means "unknown" and the view's own mount error covers it.
+  useEffect(() => {
+    let live = true;
+    CameraView.isAvailableAsync().then(
+      (available) => { if (live && !available && !done.current) fail(); },
+      () => undefined,
+    );
+    return () => { live = false; };
+  }, []);
+  function fail() {
+    if (done.current || !mounted.current) return;
+    done.current = true;
+    setScanning(false);
+    handlers.current.onError(CAMERA_OPEN_FAILED);
+  }
+  const scanned = useCallback((result: BarcodeScanningResult) => {
+    if (done.current || !mounted.current) return;
+    const code = normalizeBarcode(result.data);
+    if (!code) return;
+    done.current = true;
+    setScanning(false);
+    handlers.current.onBarcode(code);
+  }, []);
+
+  if (permission && !permission.granted && !permission.canAskAgain) {
+    return (
+      <View style={styles.denied} role="alert">
+        <Icon name="triangle-alert" size={18} strokeWidth={2} color={colors.scoreLow} />
+        <Text style={[type.body, styles.flex, { color: colors.text }]}>{BARCODE_CAMERA_DENIED}</Text>
+        <Button variant="outlined" onPress={openSettings} accessibilityLabel={OPEN_SETTINGS_LABEL}>{OPEN_SETTINGS}</Button>
+      </View>
+    );
+  }
+  return (
+    <View style={[styles.frame, { backgroundColor: colors.input }]}>
+      {permission?.granted ? (
+        <CameraView
+          style={styles.fill}
+          facing="back"
+          active={scanning}
+          barcodeScannerSettings={SCANNER_SETTINGS}
+          onBarcodeScanned={scanning ? scanned : undefined}
+          onMountError={fail}
+          accessibilityLabel="Point the rear camera at the product barcode"
+        />
+      ) : null}
+    </View>
+  );
 }
+const styles = StyleSheet.create({
+  frame: { width: '100%', aspectRatio: 4 / 3, borderRadius: radius.photo, overflow: 'hidden' },
+  fill: { flex: 1 },
+  denied: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
+  flex: { flex: 1 },
+});

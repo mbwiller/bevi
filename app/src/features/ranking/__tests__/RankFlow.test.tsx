@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, configure, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { maxAnchoredComparisons, maxComparisons, storedScore } from '@bevi/ranking';
 import { ApiError, BUCKET_LABEL, type BevSummary, type Bucket, type SubmitRankingResult } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { formatScore } from '@/lib/format';
 import { controls } from '@/testing/fakeApi';
+import { grabModalDismiss } from '@/testing/modalDismiss';
 
 import { RankFlow } from '../RankFlow';
 
@@ -54,10 +55,10 @@ async function unranked(n: number): Promise<BevSummary[]> {
   return out;
 }
 
-async function renderRank(bevId: string, detailIfRanked = false) {
+async function renderRank(bevId: string, detailIfRanked = false, returnToDetail = false) {
   await render(
     <QueryClientProvider client={client}>
-      <RankFlow bevId={bevId} detailIfRanked={detailIfRanked} />
+      <RankFlow bevId={bevId} detailIfRanked={detailIfRanked} returnToDetail={returnToDetail} />
     </QueryClientProvider>,
   );
 }
@@ -119,6 +120,17 @@ it('gut check → comparisons → note → submit with expectedBucketSize → re
   });
   expect(submit.mock.calls[0]![0].comparisons.length).toBeGreaterThan(0);
   expect(screen.getByText(new RegExp(`^#1 of ${loved.length + 1} in Loved · \\d+\\.\\d$`))).toBeTruthy();
+});
+
+it('returns a newly created Bev to its detail after its first ranking', async () => {
+  const [bev] = await unranked(1);
+  await renderRank(bev!.id, false, true);
+  await chooseBucket('Loved it');
+  await answerAllNewBetter(bev!.name);
+  await fireEvent.press(screen.getByLabelText('Save'));
+  await screen.findByText('Done');
+  await fireEvent.press(screen.getByRole('button', { name: 'Done' }));
+  await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/bev/[id]', params: { id: bev!.id } }));
 });
 
 it('an empty bucket skips comparisons: "First one in …"', async () => {
@@ -201,7 +213,14 @@ it('closing mid-flow asks before discarding', async () => {
   expect(screen.getByText('Which was better?')).toBeTruthy();
   expect(mockBack).not.toHaveBeenCalled();
   await fireEvent.press(screen.getByLabelText('Discard ranking'));
-  await fireEvent.press(await screen.findByLabelText('Discard'));
+  const discard = await screen.findByLabelText('Discard');
+  const dismiss = grabModalDismiss();
+  await fireEvent.press(discard);
+  // Closing, not closed: leaving now would pop the screen under a Modal that is still presented.
+  expect(mockBack).not.toHaveBeenCalled();
+  await waitFor(() => expect(screen.queryByText('Discard this ranking?')).toBeNull());
+  expect(mockBack).not.toHaveBeenCalled();
+  await act(() => dismiss());
   expect(mockBack).toHaveBeenCalledTimes(1);
 });
 

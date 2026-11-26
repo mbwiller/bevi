@@ -42,7 +42,9 @@ export function mapCachedItems<T>(data: unknown, fn: (item: T) => T): unknown {
   return data;
 }
 
+/** The `mapCachedItems` shapes, dropping the items `keep` refuses. */
 export function filterCachedItems<T>(data: unknown, keep: (item: T) => boolean): unknown {
+  if (Array.isArray(data)) return data.filter(keep);
   if (data && typeof data === 'object') {
     const d = data as { items?: T[]; pages?: Page<T>[] };
     if (Array.isArray(d.pages)) return { ...d, pages: d.pages.map((p) => ({ ...p, items: p.items.filter(keep) })) };
@@ -69,7 +71,8 @@ export function resetUserQueries(qc: QueryClient): Promise<void> {
 }
 
 /** §3: after submitRanking (and rerank/remove) refresh my rankings, the Bev, stats, feed,
- * leaderboard, recommendations, and Want to Try (ranking a Bev removes it from there). */
+ * leaderboard, recommendations, Want to Try (ranking a Bev removes it from there), and the map of
+ * where Bevs were had (a ranking can bring a place, and removing one takes its place with it). */
 export function invalidateAfterRankingChange(qc: QueryClient): Promise<unknown> {
   return Promise.all([
     qc.invalidateQueries({ queryKey: keys.rankings.all }),
@@ -81,5 +84,19 @@ export function invalidateAfterRankingChange(qc: QueryClient): Promise<unknown> 
     qc.invalidateQueries({ queryKey: keys.leaderboard.all }),
     qc.invalidateQueries({ queryKey: keys.recommendationsAll }),
     qc.invalidateQueries({ queryKey: keys.wantToTry() }),
+    qc.invalidateQueries({ queryKey: keys.venues.bevd }),
+  ]);
+}
+
+/**
+ * After `rankings.setVenue`: the place shows on the Bev'd row, on every post about that Bev (the
+ * caller's feed, their Activity and Explore) and on the map. No score moved, so nothing else does.
+ */
+export function invalidateAfterVenueChange(qc: QueryClient): Promise<unknown> {
+  return Promise.all([
+    qc.invalidateQueries({ queryKey: keys.rankings.all }),
+    qc.invalidateQueries({ queryKey: keys.feed() }),
+    qc.invalidateQueries({ queryKey: keys.explore() }),
+    qc.invalidateQueries({ queryKey: keys.venues.bevd }),
   ]);
 }

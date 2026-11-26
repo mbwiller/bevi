@@ -26,7 +26,7 @@ export function priorityLabel(priority: number | null | undefined): string | nul
   }
 }
 
-/** The states the tester ranks: still waiting for a fix. */
+/** The states a reporter's tickets are ranked in (by a founder; a tester does not rank): still waiting for a fix. */
 export function isOpen(row: Pick<BugReportSummary, 'state'>): boolean {
   return row.state === 'triage' || row.state === 'todo' || row.state === 'in_progress';
 }
@@ -39,7 +39,12 @@ export function byRank(a: BugReportSummary, b: BugReportSummary): number {
   return b.createdAt.localeCompare(a.createdAt);
 }
 
-/** The tester's open tickets, worst first: the list the rank sheet compares against. */
+/** Newest first: how Filed reports lists open tickets for an account that may not rank. */
+export function byNewest(a: BugReportSummary, b: BugReportSummary): number {
+  return b.createdAt.localeCompare(a.createdAt);
+}
+
+/** The reporter's open tickets, worst first: the list the rank sheet compares against. */
 export function openInRankOrder(rows: readonly BugReportSummary[] | undefined): BugReportSummary[] {
   return (rows ?? []).filter(isOpen).sort(byRank);
 }

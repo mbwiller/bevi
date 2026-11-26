@@ -307,6 +307,28 @@ verify_jwt = false
 enabled = true
 verify_jwt = false
 
+# send-push (T-31): delivers push notifications from `push_outbox` through
+# Expo. Its only callers are the `poke_push_sender` trigger over pg_net and the
+# every-minute `drain_push_outbox()` cron (20261127000100).
+#
+# verify_jwt = false ON PURPOSE, for generate-bev-icon's reasons: verify_jwt
+# only proves a key the project issued, the publishable key ships in every copy
+# of the app, and neither real caller holds a user JWT. This function reads and
+# writes as the service role and sends to people's phones, so the gate is
+# PUSH_WEBHOOK_SECRET and only that, compared in constant time in sender.ts. It
+# does NOT fall back to the service-role key (pg_net would persist it in
+# `net.http_request_queue`). Unset, every request is refused. The same value
+# goes in the Vault secret `push_webhook_token`. Nothing is sent unless
+# PUSH_SENDING_ENABLED is exactly `true`.
+#
+# Secrets (PUSH_WEBHOOK_SECRET, PUSH_SENDING_ENABLED, EXPO_ACCESS_TOKEN;
+# SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected) come from
+# supabase/.env locally and `supabase secrets set` in the hosted project --
+# never from this file.
+[functions.send-push]
+enabled = true
+verify_jwt = false
+
 # bug-report: the internal bug reporter's server side (docs/ticketing-system.md).
 # verify_jwt stays on, but it is only the outer gate -- the real authorisation
 # is `claim_bug_report()` / `can_report_bugs()`, which the function calls as
@@ -315,6 +337,16 @@ verify_jwt = false
 # from supabase/.env locally and `supabase secrets set --project-ref <app>` in
 # the hosted project -- never from this file.
 [functions.bug-report]
+enabled = true
+verify_jwt = true
+
+# places (BEV-22): the place picker's fallback. Asks Google's Places API for a
+# place our own venues table does not have, and turns the one a user picks
+# into a venue. verify_jwt is the outer gate only: the function calls
+# `assert_places_rate()` as the caller, which refuses a token with no user and
+# is the rate limit. Needs the GOOGLE_PLACES_API_KEY secret; without it every
+# call answers 503 and the app's own venue search carries on.
+[functions.places]
 enabled = true
 verify_jwt = true
 

@@ -1,14 +1,16 @@
 import { BANDS } from '@bevi/ranking';
-import type { Bucket } from '@bevi/shared';
+import type { Bucket, Venue, VenueMatch } from '@bevi/shared';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
 import { Button } from '@/components/Button';
 import { ErrorState } from '@/components/ErrorState';
 import { actionErrorMessage } from '@/lib/errorCopy';
+import { FORM_SCROLL } from '@/lib/formScroll';
 import { IconButton } from '@/components/IconButton';
 import { ScoreBubble } from '@/components/ScoreBubble';
 import { TextField } from '@/components/TextField';
+import { LocationRow } from '@/features/places/LocationRow';
 import { NOTE_MAX } from '@/state/rankingFlow';
 import { motion, size, spacing, type, useTheme } from '@/theme';
 
@@ -36,12 +38,21 @@ export interface NoteStepProps {
   /** Field message when the server rejected the note. */
   noteError?: string;
   notice?: string | null;
+  /** Where the Bev was had: the place this save will carry, or null. */
+  venue?: Venue | null;
+  /** A nearby venue to offer while none is chosen. */
+  venueSuggestion?: VenueMatch | null;
+  /** Opens the place picker. Without it the step has no location row. */
+  onPickVenue?: () => void;
+  /** Takes `venueSuggestion` as the place. */
+  onAcceptVenue?: () => void;
 }
 
 /**
  * Ranking flow step 3: the score revealed the moment placement finishes (ScoreBubble 72 over
- * "#4 of 31 in Loved", pouring in and counting up from the bucket's lower edge), then an optional
- * 140-character note, then Save (or Skip).
+ * "#4 of 31 in Loved", pouring in and counting up from the bucket's lower edge), then where it was
+ * had (optional, above the note so it is seen before the keyboard is), an optional 140-character
+ * note, then Save (or Skip, which skips the note and still saves a place that was chosen).
  */
 export function NoteStep({
   bucket,
@@ -58,12 +69,16 @@ export function NoteStep({
   error,
   noteError,
   notice,
+  venue = null,
+  venueSuggestion = null,
+  onPickVenue,
+  onAcceptVenue,
 }: NoteStepProps) {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const firstInBucket = bucketSize === 1;
   return (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={styles.content} {...FORM_SCROLL}>
       <View style={styles.top}>
         {onUndo ? (
           <Button variant="ghost" size="md" icon="undo-2" onPress={onUndo}>
@@ -87,6 +102,15 @@ export function NoteStep({
         <Text style={[type.body, styles.center, { color: colors.textSecondary }]}>
           {firstInBucket ? 'Nothing to compare yet. Add a note if you like.' : 'Optional. Your friends see it with your ranking.'}
         </Text>
+        {onPickVenue ? (
+          <LocationRow
+            venue={venue}
+            suggestion={venueSuggestion}
+            onPick={onPickVenue}
+            onAccept={onAcceptVenue}
+            disabled={saving}
+          />
+        ) : null}
         <TextField
           label="Note"
           placeholder="Tastes like flat Sprite"

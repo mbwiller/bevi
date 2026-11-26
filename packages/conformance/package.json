@@ -1,0 +1,21 @@
+{
+  "name": "@bevi/conformance",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@bevi/ranking": "*",
+    "@bevi/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2",
+    "vitest": "5.0.2"
+  }
+}

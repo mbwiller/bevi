@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 
 import { BevImage } from '@/components/BevImage';
 import { Button } from '@/components/Button';
@@ -6,32 +6,60 @@ import { Icon } from '@/components/Icon';
 import { useColumnWidth } from '@/lib/column';
 import { size, spacing, type, useTheme } from '@/theme';
 
-import { PHOTO_HINT, UNREADABLE_IMAGE, UPLOAD_FAILED, UPLOADING_PHOTO } from './copy';
-import type { PhotoSource } from './photo';
+import { CAMERA_DENIED, OPEN_SETTINGS, OPEN_SETTINGS_LABEL, PHOTO_HINT, PICKER_FAILED, UNREADABLE_IMAGE, UPLOAD_FAILED, UPLOADING_PHOTO } from './copy';
+import { isCameraPermissionDenied, type PhotoSource } from './photo';
 import type { PhotoUpload } from './usePhotoUpload';
 
-/** One line under a photo: uploading, failed (with Retry), or nothing. */
-export function PhotoStatusLine({ slot, failedText = UPLOAD_FAILED }: { slot: PhotoUpload; failedText?: string }) {
+function openSettings() {
+  void Linking.openSettings().catch(() => undefined);
+}
+
+/** The camera was refused, or the picker couldn't open: what to do about it. */
+function PickErrorLine({ error }: { error: unknown }) {
   const { colors } = useTheme();
-  if (slot.phase === 'uploading' || slot.phase === 'preparing') {
-    return (
-      <Text style={[type.body, { color: colors.textSecondary }]} role="status" accessibilityLiveRegion="polite">
-        {UPLOADING_PHOTO}
-      </Text>
-    );
-  }
-  if (slot.phase !== 'failed') return null;
-  const unreadable = !slot.photo;
+  const denied = isCameraPermissionDenied(error);
   return (
     <View style={styles.failed} role="alert">
       <Icon name="triangle-alert" size={18} strokeWidth={2} color={colors.scoreLow} />
-      <Text style={[type.body, styles.flex, { color: colors.text }]}>{unreadable ? UNREADABLE_IMAGE : failedText}</Text>
-      {unreadable ? null : (
-        <Button variant="outlined" onPress={slot.retry} accessibilityLabel="Retry upload">
-          Retry
+      <Text style={[type.body, styles.flex, { color: colors.text }]}>{denied ? CAMERA_DENIED : PICKER_FAILED}</Text>
+      {denied ? (
+        <Button variant="outlined" onPress={openSettings} accessibilityLabel={OPEN_SETTINGS_LABEL}>
+          {OPEN_SETTINGS}
         </Button>
-      )}
+      ) : null}
     </View>
+  );
+}
+
+/** One line under a photo: the picker's failure (camera refused), uploading, failed (with Retry), or nothing. */
+export function PhotoStatusLine({ slot, failedText = UPLOAD_FAILED }: { slot: PhotoUpload; failedText?: string }) {
+  const { colors } = useTheme();
+  const pickError = slot.pickError ? <PickErrorLine error={slot.pickError} /> : null;
+  if (slot.phase === 'uploading' || slot.phase === 'preparing') {
+    return (
+      <>
+        {pickError}
+        <Text style={[type.body, { color: colors.textSecondary }]} role="status" accessibilityLiveRegion="polite">
+          {UPLOADING_PHOTO}
+        </Text>
+      </>
+    );
+  }
+  if (slot.phase !== 'failed') return pickError;
+  const unreadable = !slot.photo;
+  return (
+    <>
+      {pickError}
+      <View style={styles.failed} role="alert">
+        <Icon name="triangle-alert" size={18} strokeWidth={2} color={colors.scoreLow} />
+        <Text style={[type.body, styles.flex, { color: colors.text }]}>{unreadable ? UNREADABLE_IMAGE : failedText}</Text>
+        {unreadable ? null : (
+          <Button variant="outlined" onPress={slot.retry} accessibilityLabel="Retry upload">
+            Retry
+          </Button>
+        )}
+      </View>
+    </>
   );
 }
 

@@ -100,8 +100,7 @@ export interface PointsRanking {
   /** The host list's `onEndReached` while the section is showing. */
   loadMore: () => void;
   /** Pull to refresh: the board in view and your stats (the pinned row's fallback). It also lets go of held rows. */
-  refresh: () => void;
-  refreshing: boolean;
+  refresh: () => Promise<unknown>;
   /**
    * Follow or unfollow, optimistically. Ranking rows flip at once (they derive Follow from your
    * Following list, as the board's rows don't carry `isFollowing`), and `useFollow` patches every
@@ -319,8 +318,7 @@ export function usePointsRanking({ scope = DEFAULT_POINTS_SCOPE, header = null, 
   const refetchStats = stats.refetch;
   const refresh = useCallback(() => {
     setHeld(null);
-    void refetch();
-    void refetchStats();
+    return Promise.all([refetch(), refetchStats()]);
   }, [refetch, refetchStats]);
 
   return {
@@ -333,7 +331,6 @@ export function usePointsRanking({ scope = DEFAULT_POINTS_SCOPE, header = null, 
     footer: isFetchingNextPage ? <PeopleSkeleton count={2} /> : <View style={styles.foot} />,
     loadMore,
     refresh,
-    refreshing: query.isRefetching && !isFetchingNextPage && !query.isPending,
     toggleFollow,
   };
 }

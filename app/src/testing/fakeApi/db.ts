@@ -7,6 +7,7 @@ import type {
   FeedEventKind,
   IconStatus,
   PriceTier,
+  PlaceType,
   VenueKind,
 } from '@bevi/shared';
 
@@ -101,6 +102,17 @@ export interface FakeFeedEvent {
   createdAt: string;
 }
 
+/**
+ * DELIVERABLE-44: a submission made before the user onboarded. `submit_ranking` writes no feed
+ * event for it but still writes its `ranking_events` row, which is what the streak is computed
+ * from; the fake keeps that day here, as RANKING feed events keep it for every other submission.
+ */
+export interface FakeUnpostedRanking {
+  userId: string;
+  bevId: string;
+  createdAt: string;
+}
+
 export interface FakeLike {
   userId: string;
   feedEventId: string;
@@ -149,6 +161,8 @@ export interface FakeVenue {
   id: string;
   name: string;
   kind: VenueKind;
+  /** `venues.place_type`; a fixture that leaves it out is 'other', as an untyped row is. */
+  placeType?: PlaceType;
   lat: number;
   lng: number;
   address: string | null;
@@ -173,6 +187,26 @@ export interface FakeVenueBev {
   source: 'menu' | 'chain';
 }
 
+/** BEV-22: where a user had a Bev, mirroring `public.bev_locations` (one per user and Bev). */
+export interface FakeBevLocation {
+  userId: string;
+  bevId: string;
+  venueId: string;
+}
+
+/**
+ * BEV-22: a place `venues.searchMore` can find and `venues.addPlace` can turn into a venue. It
+ * stands in for the outside directory the real backend asks, so it is fixture data, not state.
+ */
+export interface FakeExternalPlace {
+  placeId: string;
+  name: string;
+  placeType: PlaceType;
+  address: string | null;
+  lat: number;
+  lng: number;
+}
+
 export interface FakeDb {
   schema: number;
   users: FakeUser[];
@@ -182,6 +216,8 @@ export interface FakeDb {
   follows: FakeFollow[];
   wantToTry: FakeWantToTry[];
   feed: FakeFeedEvent[];
+  /** Optional so a db stored before it existed still loads. */
+  unpostedRankings?: FakeUnpostedRanking[];
   /** Optional so a db stored before likes existed still loads. */
   likes?: FakeLike[];
   /** Optional so a db stored before comments existed still loads. */
@@ -193,6 +229,16 @@ export interface FakeDb {
   venues?: FakeVenue[];
   /** Optional, as `venues`. */
   venueBevs?: FakeVenueBev[];
+  /** Optional so a db stored before places existed still loads. */
+  bevLocations?: FakeBevLocation[];
+  /** Optional, as `bevLocations`. */
+  externalPlaces?: FakeExternalPlace[];
+  /**
+   * DELIVERABLE-44: each user's go-to categories, favourite first, mirroring
+   * `public.user_category_picks` (one row per rank). Keyed by user id. Optional so a db stored
+   * before picks existed still loads, with nobody's picks set.
+   */
+  categoryPicks?: Record<string, CategoryId[]>;
   /** The signed-in user, persisted like a real session. */
   sessionUserId: string | null;
   /** Monotonic id counter. */

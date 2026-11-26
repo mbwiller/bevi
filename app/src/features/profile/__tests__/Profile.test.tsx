@@ -7,6 +7,8 @@ import { controls } from '@/testing/fakeApi';
 import ProfileScreen from '@/app/(tabs)/profile/index';
 import UserProfileScreen from '@/app/user/[id]/index';
 import { streakCardValue } from '@/features/profile/copy';
+import { followPill } from '@/testing/followPill';
+import * as imageOrigin from '@/features/bev/imageOrigin';
 
 let client: QueryClient;
 
@@ -43,6 +45,7 @@ async function open(url: string) {
       '(tabs)/add/index': Stub,
       'bev/[id]': Stub,
       'settings/index': Stub,
+      'image/[url]': Stub,
     },
     { initialUrl: url },
   );
@@ -178,7 +181,9 @@ describe('own profile', () => {
     expect(await within(sheet).findByText('Enter a name.')).toBeTruthy();
     await fireEvent.changeText(name, 'Tester Renamed');
     await fireEvent.press(within(sheet).getByLabelText('Save'));
-    await waitFor(async () => expect((await api.profile.getMe()).displayName).toBe('Tester Renamed'));
+    // Not `waitFor(async () => ...)`: it can leave one of its fake-clock acts open into the next test's act.
+    await waitFor(() => expect(client.isMutating() + client.isFetching()).toBe(0));
+    expect((await api.profile.getMe()).displayName).toBe('Tester Renamed');
     expect(await screen.findByText('Tester Renamed')).toBeTruthy();
   });
 });
@@ -194,20 +199,20 @@ describe("another user's profile", () => {
     if (j.isFollowing) await api.follows.unfollow(j.id);
     const before = (await api.stats.getUser(j.id)).followers;
     await open(`/user/${j.id}`);
-    const button = await screen.findByLabelText(`Follow ${j.displayName}`);
+    const button = await screen.findByLabelText(followPill(j.displayName));
     expect(button.props['aria-pressed']).toBe(false);
     expect(screen.getByLabelText(`${before} Followers`)).toBeTruthy();
 
     controls.setLatency(800);
     await fireEvent.press(button);
     // Optimistic: flipped well before the 800ms call resolves.
-    await waitFor(() => expect(screen.getByLabelText(`Follow ${j.displayName}`).props['aria-pressed']).toBe(true), { timeout: 400 });
+    await waitFor(() => expect(screen.getByLabelText(followPill(j.displayName)).props['aria-pressed']).toBe(true), { timeout: 400 });
     expect(screen.getByLabelText(`${before + 1} Followers`)).toBeTruthy();
     controls.setLatency(0);
     await waitFor(async () => expect((await api.profile.getUser(j.id)).isFollowing).toBe(true));
 
-    await fireEvent.press(screen.getByLabelText(`Follow ${j.displayName}`));
-    await waitFor(() => expect(screen.getByLabelText(`Follow ${j.displayName}`).props['aria-pressed']).toBe(false));
+    await fireEvent.press(screen.getByLabelText(followPill(j.displayName)));
+    await waitFor(() => expect(screen.getByLabelText(followPill(j.displayName)).props['aria-pressed']).toBe(false));
     await waitFor(async () => expect((await api.profile.getUser(j.id)).isFollowing).toBe(false));
   });
 
@@ -215,10 +220,10 @@ describe("another user's profile", () => {
     const j = await jules();
     if (j.isFollowing) await api.follows.unfollow(j.id);
     await open(`/user/${j.id}`);
-    const button = await screen.findByLabelText(`Follow ${j.displayName}`);
+    const button = await screen.findByLabelText(followPill(j.displayName));
     controls.failNext('network', 'follows.follow');
     await fireEvent.press(button);
-    await waitFor(() => expect(screen.getByLabelText(`Follow ${j.displayName}`).props['aria-pressed']).toBe(false));
+    await waitFor(() => expect(screen.getByLabelText(followPill(j.displayName)).props['aria-pressed']).toBe(false));
   });
 
   it('shows Bev\'d · Followers · Following and no list rows', async () => {
@@ -261,5 +266,59 @@ describe("another user's profile", () => {
     const me = await api.profile.getMe();
     const r = await open(`/user/${me.id}`);
     await waitFor(() => expect(r.path()).toBe('/profile'));
+  });
+});
+
+// T-29: a profile photo opens full screen as a large circle; initials are not pressable.
+describe('the profile photo', () => {
+  const PHOTO = 'https://example.test/avatar.jpg';
+
+  it('on your own profile, opens the round viewer with the photo', async () => {
+    const getMe = api.profile.getMe.bind(api.profile);
+    const spy = jest.spyOn(api.profile, 'getMe').mockImplementation(async () => ({ ...(await getMe()), avatarUrl: PHOTO }));
+    const me = await getMe();
+    const r = await open('/profile');
+    const photo = await screen.findByRole('imagebutton', { name: `View profile photo of @${me.handle}` });
+    // The avatar's frame is handed over before the viewer's route is pushed.
+    const opening = jest.spyOn(imageOrigin, 'openingFrom').mockImplementation(() => {
+      expect(r.path()).toBe('/profile');
+    });
+    await fireEvent.press(photo);
+    expect(opening).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(r.path()).toBe(`/image/${PHOTO}?shape=circle`));
+    opening.mockRestore();
+    spy.mockRestore();
+  });
+
+  it("on another person's profile, opens the round viewer with their photo", async () => {
+    const page = await api.profile.searchUsers({ q: 'friend_a' });
+    const j = page.items.find((u) => u.handle === 'friend_a')!;
+    const getUser = api.profile.getUser.bind(api.profile);
+    const spy = jest.spyOn(api.profile, 'getUser').mockImplementation(async (id) => ({ ...(await getUser(id)), avatarUrl: PHOTO }));
+    const r = await open(`/user/${j.id}`);
+    const photo = await screen.findByRole('imagebutton', { name: `View profile photo of @${j.handle}` });
+    const opening = jest.spyOn(imageOrigin, 'openingFrom').mockImplementation(() => {
+      expect(r.path()).toBe(`/user/${j.id}`);
+    });
+    await fireEvent.press(photo);
+    expect(opening).toHaveBeenCalledTimes(1);
+    opening.mockRestore();
+    await waitFor(() => expect(r.path()).toBe(`/image/${PHOTO}?shape=circle`));
+    spy.mockRestore();
+  });
+
+  it('with no photo, the initials are not a button and nothing opens', async () => {
+    const getMe = api.profile.getMe.bind(api.profile);
+    const spy = jest.spyOn(api.profile, 'getMe').mockImplementation(async () => ({ ...(await getMe()), avatarUrl: null }));
+    const me = await getMe();
+    const r = await open('/profile');
+    await screen.findByText(`@${me.handle}`);
+    expect(screen.queryByLabelText(`View profile photo of @${me.handle}`)).toBeNull();
+    expect(screen.queryAllByRole('imagebutton')).toHaveLength(0);
+    // The hero's avatar (the first one) is a plain image: pressing it goes nowhere.
+    const avatar = screen.getAllByRole('image', { name: me.displayName })[0]!;
+    await fireEvent.press(avatar);
+    expect(r.path()).toBe('/profile');
+    spy.mockRestore();
   });
 });

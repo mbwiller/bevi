@@ -50,11 +50,22 @@ import {
   hoursKnown,
   openAt,
   HANDLE_PATTERN,
+  MAX_CATEGORY_PICKS,
+  REPORT_NOTE_MAX,
+  REPORT_REASONS,
   RESERVED_HANDLES,
   type ApiErrorCode,
+  type AppConfig,
   type AuthApi,
   type Bev,
   type BeviApi,
+  type BevdAtVenue,
+  type BevdHere,
+  type BevdPin,
+  type BevdScope,
+  type BevLocationSummary,
+  type BlockedUser,
+  type BlocksApi,
   type BevOfPeriod,
   type BevPrediction,
   type BevsApi,
@@ -83,9 +94,14 @@ import {
   type LeaderboardApi,
   type MediaApi,
   type MetaApi,
+  type Notification,
+  type NotificationKind,
+  type NotificationSettings,
+  type NotificationsApi,
   type Page,
   type PageParams,
   type PeriodWinner,
+  type PostNotificationPerson,
   type PriceTier,
   type Profile,
   type ProfileApi,
@@ -96,6 +112,11 @@ import {
   type RankingsApi,
   type Recommendation,
   type RecsApi,
+  type ReportContentInput,
+  type ReportContentKind,
+  type ReportContentResult,
+  type ReportReason,
+  type ReportsApi,
   type Session,
   type SignInInput,
   type SignUpInput,
@@ -105,7 +126,10 @@ import {
   type SubmitRankingInput,
   type SubmitRankingResult,
   type UpdateMeInput,
+  type ExternalPlace,
+  type LatLng,
   type Venue,
+  type VenueMatch,
   type VenuePin,
   type VenuesApi,
   type WantToTryApi,
@@ -123,13 +147,14 @@ import {
   type FakeFeedEvent,
   type FakeRanking,
   type FakeUser,
+  type FakeBevLocation,
   type FakeVenue,
   type StorageLike,
 } from './db';
 import { CATALOG_CATEGORY_NODES, type CatalogCategoryNode } from './catalog';
 import { ALCOHOLIC, CATEGORIES, buildFixtures, isAdult } from './fixtures';
 import { buildEdgeMirror, type EdgeMirror } from './graph';
-import { FAKE_INVITE_CODE } from './people';
+import { FAKE_INVITE_CODE, FRIEND, ME } from './people';
 
 /**
  * Code-point string order, the tie-break every id order in the SQL uses
@@ -188,6 +213,20 @@ const ICON_GENERATION_MS = 4000;
 
 /** Writes that only change the session; they leave seeded fixtures "clean" (see FakeDb.dirty). */
 const SESSION_ONLY_METHODS = new Set(['signIn', 'signOut']);
+/**
+ * The fake's `app_config` row until `controls.setAppConfig` edits it: no maintenance, and floors
+ * the app is not below. `minAppVersion` is what the fake has always answered (the app's own
+ * version); `minContractVersion` and the message are the server's seed (IA-2: '0.0.0', none).
+ */
+const DEFAULT_APP_CONFIG: AppConfig = {
+  minAppVersion: '0.1.0',
+  minContractVersion: '0.0.0',
+  maintenance: false,
+  maintenanceMessage: null,
+};
+/** `app_config`'s CHECKs on the two floors, and on the message's length. */
+const APP_CONFIG_VERSION_RE = /^[0-9]+\.[0-9]+\.[0-9]+$/;
+const MAINTENANCE_MESSAGE_MAX = 280;
 
 export type Latency = number | readonly [min: number, max: number];
 
@@ -224,6 +263,47 @@ const venuePinCap = (zoom: number): number => {
   return 60 + (Math.min(Math.max(z, 11), 15) - 11) * 60;
 };
 
+/** Metres between two positions: the haversine formula `private.distance_m` uses (20261119193000). */
+const distanceMeters = (a: LatLng, b: LatLng): number => {
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const h =
+    Math.sin(rad(b.lat - a.lat) / 2) ** 2 +
+    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(rad(b.lng - a.lng) / 2) ** 2;
+  return 6371008.8 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
+/** `lower(unaccent(...))` with runs of whitespace collapsed, as `venues_search` normalises both sides. */
+const foldPlace = (text: string): string =>
+  text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/** pg_trgm's `similarity`: shared trigrams over all trigrams, each word padded with two spaces before and one after. */
+const trigramSimilarity = (a: string, b: string): number => {
+  const grams = (text: string): Set<string> => {
+    const out = new Set<string>();
+    for (const word of text.split(/[^a-z0-9]+/).filter(Boolean)) {
+      const padded = `  ${word} `;
+      for (let i = 0; i + 3 <= padded.length; i += 1) out.add(padded.slice(i, i + 3));
+    }
+    return out;
+  };
+  const x = grams(a);
+  const y = grams(b);
+  if (x.size === 0 || y.size === 0) return 0;
+  let shared = 0;
+  for (const g of x) if (y.has(g)) shared += 1;
+  return shared / (x.size + y.size - shared);
+};
+
+/** `venues_search`'s third tier: a name at least this similar to the query (20261119193000). */
+const PLACE_SIMILARITY_MIN = 0.35;
+
+const BEVD_SCOPES: readonly BevdScope[] = ['mine', 'friends', 'all'];
+
 /** An empty filter array is no filter (contract 2.10.0), as in `venues_in_view` and packages/api. */
 const activeFilter = <T>(values: readonly T[] | undefined): readonly T[] | null =>
   values !== undefined && values.length > 0 ? values : null;
@@ -253,6 +333,66 @@ const FEED_INLINE_COMMENTS = 7;
 /** Contract 2.12.0: how many people `FeedItem.alsoBevdBy` and `SuggestedProfile.followedBy` list (20261111000100). */
 const ALSO_BEVD_MAX = 3;
 const FOLLOWED_BY_MAX = 2;
+/** T-31: how many actors a notification row lists (get_notifications), and its page cap. */
+const NOTIFICATION_ACTORS_MAX = 2;
+const NOTIFICATIONS_PAGE_MAX = 50;
+/** `get_notifications` / `mark_notifications_read` take a bigint id; packages/api refuses anything else. */
+const NOTIFICATION_ID_RE = /^\d{1,15}$/;
+
+/**
+ * T-31: one row of the fake's `notifications` ledger, as the triggers write it (20261126000100).
+ * Ids are the ledger's own sequence, so they order rows the way the identity column does.
+ */
+interface FakeNotification {
+  id: number;
+  recipientId: string;
+  actorId: string;
+  kind: NotificationKind;
+  feedEventId: string | null;
+  commentId: string | null;
+  createdAt: string;
+  readAt: string | null;
+  /**
+   * Set on the rows `seedNotifications` deals ME, which record things that happened before the
+   * fixtures begin: the follow, like or comment behind them is not in the fixture data (seeding
+   * those would move follower, like and comment counts other suites assert), so the "is it still
+   * there" rule is skipped for them. Blocks, the age gate and the post's own existence still apply.
+   */
+  fixture?: { commentBody?: string };
+}
+
+/** One displayed row: a follow or a comment alone, or every like on one post. Newest member first. */
+interface FakeNotificationGroup {
+  head: FakeNotification;
+  members: FakeNotification[];
+}
+
+/** T-31 Release 2: `notification_settings`' defaults, what someone who never saved any gets. */
+const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = { paused: false, follows: true, likes: true, comments: true, posts: false };
+const NOTIFICATION_SETTING_FIELDS = ['paused', 'follows', 'likes', 'comments', 'posts'] as const;
+/** `push_tokens`' check, and its per-user cap (register_push_token keeps the 10 most recently seen). */
+const PUSH_TOKEN_RE = /^Expo(nent)?PushToken\[[!-~]{1,180}\]$/;
+const PUSH_TOKEN_MAX = 200;
+const PUSH_TOKENS_PER_USER = 10;
+/** get_post_notification_people refuses a longer `q`. */
+const POST_PEOPLE_QUERY_MAX = 80;
+
+/** T-31 Release 2: one `push_outbox` row, as the two queue triggers write it (20261127000100). */
+interface FakePush {
+  kind: NotificationKind | 'post';
+  recipientId: string;
+  actorId: string;
+  feedEventId: string | null;
+  commentId: string | null;
+}
+
+/** What `controls.pendingPushes` answers: one push claim_push_batch would send now. */
+export interface FakePendingPush {
+  kind: NotificationKind | 'post';
+  actorHandle: string;
+  /** The post it is about; null for a follow. */
+  postId: string | null;
+}
 /** Bev of the day / week is "strictly New York City" (get_bev_of_period, 20261018000100). */
 const BEV_OF_PERIOD_ZONE = 'America/New_York';
 /** D-01: below this many users Explore widens from two hops to everyone (get_explore, 20261019000300). */
@@ -301,9 +441,7 @@ interface UserStreak extends StreakResult {
 }
 
 export class FakeApi implements BeviApi {
-  nutrition: NonNullable<BeviApi['nutrition']> = {
-    lookupBarcode: async () => null,
-  };
+  nutrition: NonNullable<BeviApi['nutrition']> = { lookupBarcode: async () => null, lookupProduct: async () => null };
   private db: FakeDb;
   private readonly storage: StorageLike | null;
   private readonly clock: () => Date;
@@ -321,6 +459,12 @@ export class FakeApi implements BeviApi {
    * persisted: it is a property of the account on the server, not of the fake's data.
    */
   private internalReporter = false;
+  /**
+   * Whether that reporter may also rank their tickets (`can_rank_bugs()`: an admin, a founder).
+   * `setInternalReporter(true)` makes a founder (both true); `setTesterReporter()` a tester, who
+   * reports but does not rank. Never true without `internalReporter`.
+   */
+  private bugRanker = false;
   /** The fake's `bug_reports` ledger, keyed by idempotency key per user, with the summary My reports shows. */
   private bugLedger = new Map<string, { userId: string; result: BugReportResult; summary: BugReportSummary }>();
   /**
@@ -329,6 +473,47 @@ export class FakeApi implements BeviApi {
    */
   private bugOrder = new Map<string, string[]>();
   private nextTicket = 100;
+  /**
+   * IS-7: `user_blocks` and `content_reports`. Kept beside the bug ledger rather than in FakeDb,
+   * so they are in memory only (a reload of a persisted dev db starts with none) and FakeDb's
+   * schema does not move. `resetToFixtures` and account deletion clear them.
+   */
+  private blockRows: { blockerId: string; blockedId: string; createdAt: string }[] = [];
+  private contentReports: {
+    id: string;
+    reporterId: string;
+    kind: ReportContentKind;
+    targetId: string;
+    reportedUserId: string;
+    reason: ReportReason;
+    note: string | null;
+    createdAt: string;
+  }[] = [];
+  private nextContentReport = 1;
+  /**
+   * T-31: the `notifications` ledger. In memory beside the block rows, for the same reason (FakeDb's
+   * schema does not move); `resetToFixtures` re-deals ME's fixture rows, account deletion and
+   * `emptyUser` drop the rows the user is on either side of, and `clearNotifications` empties it.
+   */
+  private notificationRows: FakeNotification[] = [];
+  private nextNotification = 1;
+  /**
+   * T-31 Release 2: `notification_settings`, `post_notification_subscriptions`, `push_tokens` and
+   * `push_outbox`, in memory beside the inbox for the same reason. Cleared by `resetToFixtures`;
+   * account deletion and `emptyUser` drop the user's rows. The fake sends nothing: the queue is
+   * judged on demand by `pendingPushes`, with claim_push_batch's rules.
+   */
+  private notificationSettingsRows = new Map<string, NotificationSettings>();
+  private postSubscriptions: { subscriberId: string; targetId: string }[] = [];
+  private pushTokenRows: { token: string; userId: string; seen: number }[] = [];
+  private pushOutbox: FakePush[] = [];
+  private pushSeq = 0;
+  /**
+   * IA-2: the single `app_config` row `meta.getAppConfig` answers with. Not in FakeDb and not
+   * persisted: it is the backend's, written by an operator, not part of anyone's data. Suites set
+   * it with `controls.setAppConfig`; `resetToFixtures` puts the default back.
+   */
+  private appConfig: AppConfig = { ...DEFAULT_APP_CONFIG };
 
   constructor(options: FakeApiOptions = {}) {
     this.storage = options.storage ?? null;
@@ -345,6 +530,7 @@ export class FakeApi implements BeviApi {
       const session = stored?.sessionUserId;
       if (session && this.db.users.some((u) => u.id === session)) this.db.sessionUserId = session;
     }
+    this.seedNotifications();
     saveDb(this.storage, this.db);
   }
 
@@ -367,11 +553,155 @@ export class FakeApi implements BeviApi {
     this.db = buildFixtures(this.clock());
     this.failures = [];
     this.internalReporter = false;
+    this.bugRanker = false;
     this.bugLedger.clear();
     this.bugOrder.clear();
     this.nextTicket = 100;
+    this.blockRows = [];
+    this.contentReports = [];
+    this.nextContentReport = 1;
+    this.seedNotifications();
+    this.clearPushState();
+    this.appConfig = { ...DEFAULT_APP_CONFIG };
     this.commit();
     this.emit();
+  }
+
+  /** T-31: an empty inbox for everyone (the fixture rows included) until `resetToFixtures()`. */
+  clearNotifications(): void {
+    this.notificationRows = [];
+  }
+
+  /** T-31 Release 2: no settings, subscriptions, devices or queued pushes for anyone. */
+  private clearPushState(): void {
+    this.notificationSettingsRows.clear();
+    this.postSubscriptions = [];
+    this.pushTokenRows = [];
+    this.pushOutbox = [];
+    this.pushSeq = 0;
+  }
+
+  /**
+   * T-31 Release 2, a control: the pushes claim_push_batch would send `userId` now, oldest first.
+   * The same rules: nothing while paused, nothing of a kind switched off, nothing across a block
+   * either way, nothing about an alcoholic Bev under 21, and nothing that is no longer true (an
+   * unliked like, a deleted comment, an unfollowed follow; a post push only while the subscription
+   * and the follow stand). A post push is queued for a NEW ranking only, never a re-rank. Unlike
+   * the server, a user with no registered device is not skipped, so a suite can assert the
+   * settings without registering one (`pushTokens` lists the devices).
+   */
+  pendingPushes(userId: string): FakePendingPush[] {
+    const me = this.db.users.find((u) => u.id === userId);
+    if (!me) return [];
+    const settings = this.notificationSettingsOf(userId);
+    if (settings.paused) return [];
+    const on = { follow: settings.follows, like: settings.likes, comment: settings.comments, post: settings.posts };
+    const visible = this.visibleNotifications(me);
+    return this.pushOutbox
+      .filter((p) => p.recipientId === userId && on[p.kind] && !this.blockedBetween(userId, p.actorId))
+      .filter((p) => {
+        if (p.kind !== 'post') {
+          return visible.some(
+            (n) => n.kind === p.kind && n.actorId === p.actorId && n.feedEventId === p.feedEventId && n.commentId === p.commentId,
+          );
+        }
+        const e = this.db.feed.find((x) => x.id === p.feedEventId);
+        const bev = e && this.db.bevs.find((b) => b.id === e.bevId);
+        return (
+          !!e &&
+          !!bev &&
+          !!this.rankingOf(e.actorId, e.bevId) &&
+          this.visible(bev, me) &&
+          this.isFollowing(userId, p.actorId) &&
+          this.postSubscriptions.some((s) => s.subscriberId === userId && s.targetId === p.actorId)
+        );
+      })
+      .flatMap((p) => {
+        const actor = this.db.users.find((u) => u.id === p.actorId);
+        return actor ? [{ kind: p.kind, actorHandle: actor.handle, postId: p.feedEventId }] : [];
+      });
+  }
+
+  /** T-31 Release 2, a control: the push tokens registered to `userId`, most recently seen first. */
+  pushTokens(userId: string): string[] {
+    return this.pushTokenRows
+      .filter((t) => t.userId === userId)
+      .sort((a, z) => z.seen - a.seen)
+      .map((t) => t.token);
+  }
+
+  private notificationSettingsOf(userId: string): NotificationSettings {
+    return { ...(this.notificationSettingsRows.get(userId) ?? DEFAULT_NOTIFICATION_SETTINGS) };
+  }
+
+  /** drop_post_notification_on_unfollow: a follow that goes takes its post subscription with it. */
+  private dropPostSubscription(followerId: string, followeeId: string): void {
+    this.postSubscriptions = this.postSubscriptions.filter((s) => !(s.subscriberId === followerId && s.targetId === followeeId));
+  }
+
+  /**
+   * ME's fixture inbox, so a FakeApi-backed build opens on something to show. Dealt from ME's own
+   * posts and relative to now, so it is the same rows for the same clock:
+   *
+   *   1  follow   friend_d                       read, over a week ago (ME follows them back)
+   *   2  like     friend_d on an older post      read, over a week ago
+   *   3  comment  friend_b on that older post    read, over a week ago
+   *   4  follow   friend_e                       unread (ME does NOT follow them back)
+   *   5  comment  friend_a on ME's second-newest post   unread
+   *   6  like     friend_b on ME's newest post           unread
+   *   7  like     friend_a on ME's newest post           unread
+   *
+   * Listed, 6 and 7 are one row ("friend_a and friend_b"), so ME's badge is 3. Rows 1-3 need a post
+   * of ME's over eight days old, and 5-7 two posts; a database without them gets what it can.
+   */
+  private seedNotifications(): void {
+    this.notificationRows = [];
+    this.nextNotification = 1;
+    const byHandle = (handle: string) => this.db.users.find((u) => u.handle === handle);
+    const me = byHandle(ME.handle);
+    const [a, b, d, e] = [byHandle(FRIEND.handle), byHandle('friend_b'), byHandle('friend_d'), byHandle('friend_e')];
+    if (!me || !a || !b || !d || !e) return;
+
+    const MINUTE = 60_000;
+    const DAY = 24 * 60 * MINUTE;
+    const now = this.now().getTime();
+    const at = (ms: number) => new Date(ms).toISOString();
+    const posts = this.db.feed
+      .filter((ev) => ev.actorId === me.id && ev.type === 'RANKING' && !!this.rankingOf(me.id, ev.bevId))
+      .sort((x, z) => z.createdAt.localeCompare(x.createdAt));
+    const add = (row: Omit<FakeNotification, 'id' | 'recipientId'>) =>
+      this.notificationRows.push({ id: this.nextNotification++, recipientId: me.id, ...row });
+
+    const older = posts.find((p) => Date.parse(p.createdAt) < now - 8 * DAY);
+    if (older) {
+      const t0 = Date.parse(older.createdAt);
+      const read = (ms: number) => ({ createdAt: at(ms), readAt: at(ms + DAY) });
+      add({ actorId: d.id, kind: 'follow', feedEventId: null, commentId: null, ...read(t0 + 30 * MINUTE), fixture: {} });
+      add({ actorId: d.id, kind: 'like', feedEventId: older.id, commentId: null, ...read(t0 + 60 * MINUTE), fixture: {} });
+      add({
+        actorId: b.id,
+        kind: 'comment',
+        feedEventId: older.id,
+        commentId: 'fixture-comment-1',
+        ...read(t0 + 120 * MINUTE),
+        fixture: { commentBody: 'Still thinking about this one' },
+      });
+    }
+    add({ actorId: e.id, kind: 'follow', feedEventId: null, commentId: null, createdAt: at(now - 10 * MINUTE), readAt: null, fixture: {} });
+    const [newest, second] = posts;
+    if (newest && second) {
+      add({
+        actorId: a.id,
+        kind: 'comment',
+        feedEventId: second.id,
+        commentId: 'fixture-comment-2',
+        createdAt: at(now - 6 * MINUTE),
+        readAt: null,
+        fixture: { commentBody: 'Need to try this' },
+      });
+      add({ actorId: b.id, kind: 'like', feedEventId: newest.id, commentId: null, createdAt: at(now - 4 * MINUTE), readAt: null, fixture: {} });
+      add({ actorId: a.id, kind: 'like', feedEventId: newest.id, commentId: null, createdAt: at(now - 2 * MINUTE), readAt: null, fixture: {} });
+    }
   }
 
   /**
@@ -388,9 +718,33 @@ export class FakeApi implements BeviApi {
     this.commit();
   }
 
-  /** Make (or stop making) the signed-in user an internal bug reporter. */
+  /**
+   * Edit the fake's `app_config` row, as an operator would the real one: the fields given replace
+   * the current ones, the rest stay. Refuses what the table's CHECKs refuse, so a suite cannot
+   * render a config the server could never send.
+   */
+  setAppConfig(config: Partial<AppConfig>): void {
+    const next = { ...this.appConfig, ...config };
+    for (const key of ['minAppVersion', 'minContractVersion'] as const) {
+      if (!APP_CONFIG_VERSION_RE.test(next[key])) throw new Error(`setAppConfig: ${key} must be x.y.z, got '${next[key]}'`);
+    }
+    const message = next.maintenanceMessage;
+    if (message !== null && (message.length < 1 || message.length > MAINTENANCE_MESSAGE_MAX)) {
+      throw new Error(`setAppConfig: maintenanceMessage must be null or 1 to ${MAINTENANCE_MESSAGE_MAX} characters`);
+    }
+    this.appConfig = next;
+  }
+
+  /** Make (or stop making) the signed-in user an internal bug reporter who is a founder: they report and rank. */
   setInternalReporter(internal: boolean): void {
     this.internalReporter = internal;
+    this.bugRanker = internal;
+  }
+
+  /** Make the signed-in user a tester: an internal reporter who may not rank (`profiles.role` 'tester'). */
+  setTesterReporter(): void {
+    this.internalReporter = true;
+    this.bugRanker = false;
   }
 
   /**
@@ -403,9 +757,12 @@ export class FakeApi implements BeviApi {
     entry.summary = { ...entry.summary, state, stateLabel: BUG_STATE_LABELS[state], updatedAt: this.now().toISOString() };
   }
 
-  /** The user's tickets with their ranks, newest first (what `bugs.listMine` answers). */
+  /**
+   * The user's tickets with their ranks, newest first (what `bugs.listMine` answers). For a
+   * reporter who may not rank (a tester) every rank is null, as the status route answers.
+   */
   private bugSummaries(userId: string): BugReportSummary[] {
-    const ranks = new Map(this.openBugOrder(userId).map((id, i) => [id, i + 1]));
+    const ranks = new Map(this.bugRanker ? this.openBugOrder(userId).map((id, i) => [id, i + 1]) : []);
     return [...this.bugLedger.values()]
       .filter((entry) => entry.userId === userId)
       .map((entry) => ({ ...entry.summary, rank: ranks.get(entry.summary.ticketId) ?? null }))
@@ -504,6 +861,20 @@ export class FakeApi implements BeviApi {
     return this.db.users.find((u) => u.id === id) ?? fail('not_found', 'No such user');
   }
 
+  /**
+   * private.is_blocked: a block between these two people in EITHER direction. The one rule for
+   * "hidden by a block"; never exposed, since it would tell a blocked person who blocked them.
+   */
+  private blockedBetween(a: string, b: string): boolean {
+    return this.blockRows.some((x) => (x.blockerId === a && x.blockedId === b) || (x.blockerId === b && x.blockedId === a));
+  }
+
+  /** `user(id)`, but 'not_found' across a block too, as every read of a named person now says. */
+  private visibleUser(id: string, viewer: FakeUser): FakeUser {
+    const u = this.user(id);
+    return this.blockedBetween(viewer.id, u.id) ? fail('not_found', 'No such user') : u;
+  }
+
   private venueRows(): FakeVenue[] {
     return this.db.venues ?? [];
   }
@@ -523,6 +894,7 @@ export class FakeApi implements BeviApi {
       id: v.id,
       name: v.name,
       kind: v.kind,
+      placeType: v.placeType ?? 'other',
       lat: v.lat,
       lng: v.lng,
       address: v.address,
@@ -534,6 +906,47 @@ export class FakeApi implements BeviApi {
       hoursKnown: v.hoursKnown && hoursKnown(v.hoursOsm),
       website: v.website,
     };
+  }
+
+  private locationRows(): FakeBevLocation[] {
+    return (this.db.bevLocations ??= []);
+  }
+
+  /** An active venue by id, or not_found: a hidden venue and an unknown one are the same answer. */
+  private activeVenue(venueId: string): FakeVenue {
+    return this.venueRows().find((v) => v.id === venueId && !v.hidden) ?? fail('not_found', 'No such venue');
+  }
+
+  /** Where `userId` had `bevId`, or null: nobody said, or the venue has since been hidden. */
+  private venueOf(userId: string, bevId: string): Venue | null {
+    const row = this.locationRows().find((l) => l.userId === userId && l.bevId === bevId);
+    const venue = row ? this.venueRows().find((v) => v.id === row.venueId && !v.hidden) : undefined;
+    return venue ? this.toVenue(venue) : null;
+  }
+
+  /** `private.put_bev_location`: set, replace or (null) clear. The caller has checked the ranking exists. */
+  private putLocation(userId: string, bevId: string, venueId: string | null): Venue | null {
+    const venue = venueId === null ? null : this.activeVenue(venueId);
+    this.db.bevLocations = this.locationRows().filter((l) => !(l.userId === userId && l.bevId === bevId));
+    if (!venue) return null;
+    this.db.bevLocations.push({ userId, bevId, venueId: venue.id });
+    return this.toVenue(venue);
+  }
+
+  /**
+   * `private.visible_bev_locations`, narrowed to a scope: the rankings with a place that `me` may
+   * see, by `me` ('mine'), by the people `me` follows ('friends'), or both.
+   */
+  private scopedLocations(me: FakeUser, scope: BevdScope): { ranking: FakeRanking; venue: FakeVenue }[] {
+    return this.locationRows().flatMap((l) => {
+      const mine = l.userId === me.id;
+      const inScope = mine ? scope !== 'friends' : scope !== 'mine' && this.isFollowing(me.id, l.userId);
+      if (!inScope) return [];
+      const ranking = this.rankingOf(l.userId, l.bevId);
+      const venue = this.venueRows().find((v) => v.id === l.venueId && !v.hidden);
+      const bev = this.db.bevs.find((b) => b.id === l.bevId);
+      return ranking && venue && bev && this.visible(bev, me) ? [{ ranking, venue }] : [];
+    });
   }
 
   private bev(id: string): FakeBev {
@@ -641,12 +1054,14 @@ export class FakeApi implements BeviApi {
   /**
    * @bevi/ranking's computeStreak over the local days (profile timezone, `localDayKey`) on which
    * the user ranked: each ranking's createdAt plus every RANKING feed event (written on submit and
-   * re-rank, kept on removal), so re-ranks count and removals don't break a streak (§8.14).
+   * re-rank, kept on removal) and every submission made before onboarding (which posts no feed
+   * event), so re-ranks count and removals don't break a streak (§8.14).
    */
   private streakOf(u: FakeUser): UserStreak {
     const stamps = [
       ...this.db.rankings.filter((r) => r.userId === u.id).map((r) => r.createdAt),
       ...this.db.feed.filter((e) => e.actorId === u.id && e.type === 'RANKING').map((e) => e.createdAt),
+      ...(this.db.unpostedRankings ?? []).filter((e) => e.userId === u.id).map((e) => e.createdAt),
     ];
     const keys = [...new Set(stamps.map((at) => localDayKey(at, u.timezone)))];
     const todayKey = localDayKey(this.nowIso(), u.timezone);
@@ -738,6 +1153,11 @@ export class FakeApi implements BeviApi {
 
   private toSummary(b: FakeBev): BevSummary {
     const photo = this.assetUrlAndStatus(b.photoAssetId);
+    // What `generatedIcons.ts` does to every summary the real API returns: a
+    // COMPLETED generated icon takes the icon slot, and carries the band the
+    // caller letters across it. Pending, failed and 'none' leave it empty, so
+    // the Bev goes on showing its creator's photograph until the icon exists.
+    const icon = this.iconFor(b);
     return {
       id: b.id,
       name: b.name,
@@ -745,9 +1165,11 @@ export class FakeApi implements BeviApi {
       flavor: b.flavor,
       categoryId: b.categoryId,
       photoUrl: photo.url,
-      // The real API serves an icon from the `bev-icons` bucket. The fake catalog has no icon rows,
-      // so none: bevImageProps then falls back to the category art.
-      iconUrl: null,
+      // The fake catalog has no AUTHORED icon rows (see `fallbackIconUrlFor`),
+      // so this is the generated icon or nothing, and bevImageProps falls back
+      // to the photograph and then the category art.
+      iconUrl: icon.url,
+      iconLabelBand: icon.url ? { x: 0.33, y: 0.29, width: 0.34, height: 0.25, dark: true } : null,
       photoStatus: photo.status,
       priceTier: b.priceTier,
       priceEstimated: b.priceEstimated,
@@ -773,7 +1195,7 @@ export class FakeApi implements BeviApi {
   }
 
   private toRanked(r: FakeRanking): RankedBev {
-    return { ...this.toRanking(r), bev: this.toSummary(this.bev(r.bevId)) };
+    return { ...this.toRanking(r), bev: this.toSummary(this.bev(r.bevId)), venue: this.venueOf(r.userId, r.bevId) };
   }
 
   /** Positions and scores for a whole bucket via @bevi/ranking's respaceBucket. */
@@ -881,15 +1303,27 @@ export class FakeApi implements BeviApi {
   private wipeUserData(userId: string): void {
     const db = this.db;
     db.rankings = db.rankings.filter((r) => r.userId !== userId);
+    db.bevLocations = (db.bevLocations ?? []).filter((l) => l.userId !== userId);
     db.comparisons = db.comparisons.filter((c) => c.userId !== userId);
     db.follows = db.follows.filter((f) => f.followerId !== userId && f.followeeId !== userId);
+    this.blockRows = this.blockRows.filter((b) => b.blockerId !== userId && b.blockedId !== userId);
+    // notifications: both people cascade from profiles.
+    this.notificationRows = this.notificationRows.filter((n) => n.recipientId !== userId && n.actorId !== userId);
+    // T-31 Release 2: settings, subscriptions either way, devices and queued pushes cascade too.
+    this.notificationSettingsRows.delete(userId);
+    this.postSubscriptions = this.postSubscriptions.filter((s) => s.subscriberId !== userId && s.targetId !== userId);
+    this.pushTokenRows = this.pushTokenRows.filter((t) => t.userId !== userId);
+    this.pushOutbox = this.pushOutbox.filter((p) => p.recipientId !== userId && p.actorId !== userId);
     db.wantToTry = db.wantToTry
       .filter((w) => w.userId !== userId)
       .map((w) => (w.viaUserId === userId ? { ...w, viaUserId: null } : w));
     db.feed = db.feed.filter((e) => e.actorId !== userId);
+    db.unpostedRankings = (db.unpostedRankings ?? []).filter((e) => e.userId !== userId);
     const events = new Set(db.feed.map((e) => e.id));
     db.likes = (db.likes ?? []).filter((l) => l.userId !== userId && events.has(l.feedEventId));
     db.comments = (db.comments ?? []).filter((c) => c.userId !== userId && events.has(c.feedEventId));
+    // user_category_picks cascades from profiles; and a first-run user (emptyUser) has none yet.
+    if (db.categoryPicks) delete db.categoryPicks[userId];
   }
 
   /** The feed event `id` if `viewer` can see it (own or a followee's post, Bev age-visible), else not_found. */
@@ -900,17 +1334,105 @@ export class FakeApi implements BeviApi {
       !!e &&
       !!bev &&
       (e.actorId === viewer.id || this.db.follows.some((f) => f.followerId === viewer.id && f.followeeId === e.actorId)) &&
+      !this.blockedBetween(viewer.id, e.actorId) &&
       this.visible(bev, viewer);
     return sees ? e! : fail('not_found', 'No such post');
   }
 
-  /** A post's comments that aren't deleted, oldest first. */
-  private liveComments(eventId: string): FakeComment[] {
-    return (this.db.comments ?? []).filter((c) => c.feedEventId === eventId && !c.deleted).sort((a, z) => commentSeq(a) - commentSeq(z));
+  /**
+   * A post's comments that aren't deleted, oldest first. With a viewer, also without the
+   * comments of anyone on the other side of a block from them (post_comments_select, IS-7).
+   */
+  private liveComments(eventId: string, viewer?: FakeUser): FakeComment[] {
+    return (this.db.comments ?? [])
+      .filter((c) => c.feedEventId === eventId && !c.deleted && !(viewer && this.blockedBetween(viewer.id, c.userId)))
+      .sort((a, z) => commentSeq(a) - commentSeq(z));
   }
 
   private toComment(c: FakeComment, viewer: FakeUser): Comment {
     return { id: c.id, author: this.toProfile(this.user(c.userId), viewer), body: c.body, createdAt: c.createdAt };
+  }
+
+  /**
+   * The notify_on_* triggers (T-31): one row per thing that happened, never about yourself, and
+   * never a second one for the same follow (per pair), like (per pair and post) or comment.
+   */
+  private notify(recipientId: string, actorId: string, kind: NotificationKind, feedEventId: string | null, commentId: string | null): void {
+    if (recipientId === actorId) return;
+    const exists = this.notificationRows.some(
+      (n) =>
+        n.kind === kind &&
+        (kind === 'comment'
+          ? n.commentId === commentId
+          : n.recipientId === recipientId && n.actorId === actorId && (kind === 'follow' || n.feedEventId === feedEventId)),
+    );
+    if (exists) return;
+    this.notificationRows.push({
+      id: this.nextNotification++,
+      recipientId,
+      actorId,
+      kind,
+      feedEventId,
+      commentId,
+      createdAt: this.nowIso(),
+      readAt: null,
+    });
+    // enqueue_push_on_notification (T-31 Release 2): a NEW inbox row is a push to queue.
+    this.pushOutbox.push({ kind, recipientId, actorId, feedEventId, commentId });
+  }
+
+  /**
+   * visible_notifications: `me`'s rows that are still true. No block either way; the follow, the
+   * like or the (undeleted) comment still there (skipped for fixture rows, see FakeNotification);
+   * and for a post, the post still there with its ranking and its Bev within the age gate.
+   */
+  private visibleNotifications(me: FakeUser): FakeNotification[] {
+    return this.notificationRows.filter((n) => {
+      if (n.recipientId !== me.id || this.blockedBetween(me.id, n.actorId)) return false;
+      if (!this.db.users.some((u) => u.id === n.actorId)) return false;
+      if (n.kind === 'follow') return !!n.fixture || this.isFollowing(n.actorId, me.id);
+      const e = this.db.feed.find((x) => x.id === n.feedEventId);
+      // A removed ranking's post is gone (on the server its feed event, and these with it, cascade).
+      if (!e || !this.rankingOf(e.actorId, e.bevId)) return false;
+      const bev = this.db.bevs.find((x) => x.id === e.bevId);
+      if (!bev || !this.visible(bev, me)) return false;
+      if (n.fixture) return true;
+      if (n.kind === 'like') return (this.db.likes ?? []).some((l) => l.userId === n.actorId && l.feedEventId === n.feedEventId);
+      return (this.db.comments ?? []).some((c) => c.id === n.commentId && !c.deleted);
+    });
+  }
+
+  /** get_notifications' rows before paging: likes on one post grouped, newest row first. */
+  private notificationGroups(me: FakeUser): FakeNotificationGroup[] {
+    const groups = new Map<string, FakeNotification[]>();
+    // Newest first, so each group's first member is its head and the map's order is the rows'.
+    for (const n of this.visibleNotifications(me).sort((x, z) => z.id - x.id)) {
+      const key = n.kind === 'like' ? `like:${n.feedEventId}` : `${n.kind}:${n.id}`;
+      const members = groups.get(key);
+      if (members) members.push(n);
+      else groups.set(key, [n]);
+    }
+    return [...groups.values()].map((members) => ({ head: members[0]!, members }));
+  }
+
+  private toNotification({ head, members }: FakeNotificationGroup, me: FakeUser): Notification {
+    const event = head.feedEventId ? this.db.feed.find((x) => x.id === head.feedEventId) : undefined;
+    const bev = event ? this.db.bevs.find((x) => x.id === event.bevId) : undefined;
+    const body =
+      head.kind === 'comment'
+        ? (head.fixture?.commentBody ?? (this.db.comments ?? []).find((c) => c.id === head.commentId)?.body ?? '')
+        : null;
+    return {
+      id: String(head.id),
+      kind: head.kind,
+      createdAt: head.createdAt,
+      unread: members.some((m) => m.readAt === null),
+      actors: members.slice(0, NOTIFICATION_ACTORS_MAX).map((m) => this.toRow(this.user(m.actorId), me)),
+      actorCount: new Set(members.map((m) => m.actorId)).size,
+      postId: head.feedEventId,
+      bev: bev ? this.toSummary(bev) : null,
+      comment: body !== null && head.commentId ? { id: head.commentId, body } : null,
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -994,6 +1516,11 @@ export class FakeApi implements BeviApi {
       () => {
         const me = this.requireUser();
         this.wipeUserData(me.id);
+        // content_reports: a report about the account goes with it; one the account filed stays,
+        // reporterless (reporter_id `on delete set null`), so the person it named is still reviewed.
+        this.contentReports = this.contentReports
+          .filter((r) => r.reportedUserId !== me.id)
+          .map((r) => (r.reporterId === me.id ? { ...r, reporterId: '' } : r));
         this.db.assets = this.db.assets.filter((a) => a.userId !== me.id);
         for (const b of this.db.bevs) if (b.createdById === me.id) b.createdById = null;
         this.db.users = this.db.users.filter((u) => u.id !== me.id);
@@ -1086,7 +1613,7 @@ export class FakeApi implements BeviApi {
     getUser: (id: string) =>
       this.call('profile.getUser', () => {
         const me = this.requireUser();
-        return this.toRow(this.user(id), me);
+        return this.toRow(this.visibleUser(id, me), me);
       }),
 
     searchUsers: (params) =>
@@ -1094,23 +1621,62 @@ export class FakeApi implements BeviApi {
         const me = this.requireUser();
         const q = norm(params.q).replace(/^@/, '');
         const rows = this.db.users
-          .filter((u) => u.id !== me.id && (!q || u.handle.includes(q) || norm(u.displayName).includes(q)))
+          .filter(
+            (u) =>
+              u.id !== me.id &&
+              !this.blockedBetween(me.id, u.id) &&
+              (!q || u.handle.includes(q) || norm(u.displayName).includes(q)),
+          )
           .sort((a, z) => Number(z.handle.startsWith(q)) - Number(a.handle.startsWith(q)) || a.handle.localeCompare(z.handle))
           .map((u) => this.toRow(u, me));
         return paginate(rows, params, 25);
       }),
+
+    // DELIVERABLE-44: `user_category_picks` is read through an own-rows policy, so only the
+    // caller's own ever comes back.
+    getCategoryPicks: () =>
+      this.call('profile.getCategoryPicks', (): CategoryId[] => {
+        // Outside the `?.[]`, which would skip the session check while nobody has picks yet.
+        const me = this.requireUser();
+        return [...(this.db.categoryPicks?.[me.id] ?? [])];
+      }),
+
+    // `set_category_picks`' rules, in its order: every validation failure is the one field, and
+    // only a list that passes them all is age-checked. Nothing is saved when it throws.
+    setCategoryPicks: (categoryIds: CategoryId[]) =>
+      this.call(
+        'profile.setCategoryPicks',
+        (): CategoryId[] => {
+          const me = this.requireUser();
+          const bad = (message: string) => invalid('categoryIds', message);
+          if (!Array.isArray(categoryIds)) bad('Choose up to three categories');
+          if (categoryIds.length > MAX_CATEGORY_PICKS) bad(`Choose up to ${MAX_CATEGORY_PICKS} categories`);
+          if (categoryIds.some((id) => id === null || id === undefined)) bad('Choose a category');
+          if (new Set(categoryIds).size !== categoryIds.length) bad('Choose each category once');
+          // CATEGORIES is the 15 roots: an unknown id and a leaf both fail here.
+          if (!categoryIds.every((id) => CATEGORIES.some((c) => c.id === id))) bad('Choose a category');
+          if (categoryIds.some((id) => ALCOHOLIC.has(id)) && !this.canSeeAlcohol(me)) fail('age_restricted', 'Not available');
+          const picks = [...categoryIds];
+          this.db.categoryPicks = { ...this.db.categoryPicks, [me.id]: picks };
+          return [...picks];
+        },
+        true,
+      ),
   };
 
   stats: StatsApi = {
     getMine: () => this.call('stats.getMine', () => this.statsFor(this.requireUser())),
     getUser: (id: string) =>
       this.call('stats.getUser', () => {
-        this.requireUser();
-        return this.statsFor(this.user(id));
+        const me = this.requireUser();
+        return this.statsFor(this.visibleUser(id, me));
       }),
     getCategoryProgress: () => this.call('stats.getCategoryProgress', () => this.categoryProgress(this.requireUser())),
     getTasteProfile: (userId: string) =>
-      this.call('stats.getTasteProfile', () => this.tasteProfile(this.requireUser(), this.user(userId))),
+      this.call('stats.getTasteProfile', () => {
+        const me = this.requireUser();
+        return this.tasteProfile(me, this.visibleUser(userId, me));
+      }),
   };
 
   /**
@@ -1172,7 +1738,12 @@ export class FakeApi implements BeviApi {
           const me = this.requireUser();
           this.user(id);
           if (id === me.id) invalid('id', "You can't follow yourself");
-          if (!this.isFollowing(me.id, id)) this.db.follows.push({ followerId: me.id, followeeId: id, createdAt: this.nowIso() });
+          // follow_user (IS-7): refused across a block either way, as "no such user".
+          this.visibleUser(id, me);
+          if (!this.isFollowing(me.id, id)) {
+            this.db.follows.push({ followerId: me.id, followeeId: id, createdAt: this.nowIso() });
+            this.notify(id, me.id, 'follow', null, null);
+          }
         },
         true,
       ),
@@ -1184,6 +1755,7 @@ export class FakeApi implements BeviApi {
           const me = this.requireUser();
           this.user(id);
           this.db.follows = this.db.follows.filter((f) => !(f.followerId === me.id && f.followeeId === id));
+          this.dropPostSubscription(me.id, id);
         },
         true,
       ),
@@ -1192,8 +1764,9 @@ export class FakeApi implements BeviApi {
       this.call('follows.listFollowers', () => {
         const me = this.requireUser();
         this.user(id);
+        // follows_select (IS-7): no edge with someone across a block from the caller at either end.
         const rows = this.db.follows
-          .filter((f) => f.followeeId === id)
+          .filter((f) => f.followeeId === id && !this.blockedBetween(me.id, f.followerId) && !this.blockedBetween(me.id, f.followeeId))
           .sort((a, z) => z.createdAt.localeCompare(a.createdAt))
           .map((f) => this.toRow(this.user(f.followerId), me));
         return paginate(rows, page, 50);
@@ -1204,7 +1777,7 @@ export class FakeApi implements BeviApi {
         const me = this.requireUser();
         this.user(id);
         const rows = this.db.follows
-          .filter((f) => f.followerId === id)
+          .filter((f) => f.followerId === id && !this.blockedBetween(me.id, f.followerId) && !this.blockedBetween(me.id, f.followeeId))
           .sort((a, z) => z.createdAt.localeCompare(a.createdAt))
           .map((f) => this.toRow(this.user(f.followeeId), me));
         return paginate(rows, page, 50);
@@ -1215,7 +1788,7 @@ export class FakeApi implements BeviApi {
         const me = this.requireUser();
         const count = (id: string) => this.db.rankings.filter((r) => r.userId === id).length;
         return this.db.users
-          .filter((u) => u.id !== me.id && !this.isFollowing(me.id, u.id))
+          .filter((u) => u.id !== me.id && !this.isFollowing(me.id, u.id) && !this.blockedBetween(me.id, u.id))
           .sort((a, z) => count(z.id) - count(a.id) || a.handle.localeCompare(z.handle))
           .slice(0, 10)
           .map((u): SuggestedProfile => ({ ...this.toRow(u, me), ...this.followedBy(u, me) }));
@@ -1427,10 +2000,7 @@ export class FakeApi implements BeviApi {
             aliases: [],
             photoAssetId: photo?.id ?? null,
             labelAssetId: input.labelAssetId ?? null,
-            // THE TRIGGER, and the fake's whole model of it: a creation request
-            // that carried a photo schedules generation, and nothing else in
-            // this class ever sets `iconReadyAt`. No photo means null, which is
-            // 'none' for good -- adding one later cannot make it eligible.
+            // A new Bev with a verified photo automatically enters generation.
             iconReadyAt: photo ? new Date(this.now().getTime() + this.iconGenerationMs).toISOString() : null,
             iconStatusOverride: null,
             // A snapshot sent by a client older than 3.1.0 carries no `source`;
@@ -1624,11 +2194,22 @@ export class FakeApi implements BeviApi {
     return note || null;
   }
 
-  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string) {
+  /**
+   * `post` false is a submission made before onboarding ended: `submit_ranking` writes no feed
+   * event for it (DELIVERABLE-44), so it is kept in `unpostedRankings` for the streak instead and
+   * there is no event id to return. A re-rank always posts, as `rerank_bev` does.
+   */
+  private logPlacement(me: FakeUser, rankingId: string, bevId: string, comparisons: readonly Comparison[], at: string, post = true): string | null {
     for (const c of comparisons) {
       this.db.comparisons.push({ rankingId, userId: me.id, winnerBevId: c.winnerBevId, loserBevId: c.loserBevId, tie: !!c.tie, createdAt: at });
     }
-    this.db.feed.push({ id: this.nextId('feed'), type: 'RANKING', actorId: me.id, bevId, createdAt: at });
+    if (!post) {
+      (this.db.unpostedRankings ??= []).push({ userId: me.id, bevId, createdAt: at });
+      return null;
+    }
+    const id = this.nextId('feed');
+    this.db.feed.push({ id, type: 'RANKING', actorId: me.id, bevId, createdAt: at });
+    return id;
   }
 
   rankings: RankingsApi = {
@@ -1654,8 +2235,9 @@ export class FakeApi implements BeviApi {
       this.call('rankings.listUser', () => {
         const me = this.requireUser();
         this.user(id);
+        // rankings_select (IS-7): someone across a block has no visible rankings, so an empty list.
         const rows = this.db.rankings
-          .filter((r) => r.userId === id && this.visible(this.bev(r.bevId), me))
+          .filter((r) => r.userId === id && !this.blockedBetween(me.id, id) && this.visible(this.bev(r.bevId), me))
           .sort((a, z) => z.updatedAt.localeCompare(a.updatedAt) || z.id.localeCompare(a.id))
           .map((r) => this.toRanked(r));
         return paginate(rows, page, 20);
@@ -1699,6 +2281,9 @@ export class FakeApi implements BeviApi {
           if (ids.length !== input.expectedBucketSize) {
             fail('conflict', 'Your list changed', { reason: 'bucket_changed', bucketSize: ids.length });
           }
+          // submit_ranking_with_location saves both or neither, so the venue is checked before
+          // anything is written.
+          if (input.venueId) this.activeVenue(input.venueId);
           const next = insertIntoBucket(ids, bev.id, input.insertIndex);
           const at = this.nowIso();
           const row: FakeRanking = {
@@ -1715,7 +2300,18 @@ export class FakeApi implements BeviApi {
           this.db.rankings.push(row);
           this.writeBucket(me.id, input.bucket, next);
           this.db.wantToTry = this.db.wantToTry.filter((w) => !(w.userId === me.id && w.bevId === bev.id));
-          this.logPlacement(me, row.id, bev.id, input.comparisons, at);
+          if (input.venueId) this.putLocation(me.id, bev.id, input.venueId);
+          const eventId = this.logPlacement(me, row.id, bev.id, input.comparisons, at, me.onboarded);
+          // enqueue_push_on_post (T-31 Release 2): a NEW ranking ('ranked', never a re-rank) queues
+          // a post push for everyone who asked for this person's posts. The trigger is on the feed
+          // event, so a starter ranking, which has none, pushes nothing.
+          if (eventId !== null) {
+            for (const s of this.postSubscriptions) {
+              if (s.targetId === me.id && s.subscriberId !== me.id) {
+                this.pushOutbox.push({ kind: 'post', recipientId: s.subscriberId, actorId: me.id, feedEventId: eventId, commentId: null });
+              }
+            }
+          }
           return { ranking: this.toRanking(row), bucketSize: next.length };
         },
         true,
@@ -1732,6 +2328,7 @@ export class FakeApi implements BeviApi {
           if (target.length !== input.expectedBucketSize) {
             fail('conflict', 'Your list changed', { reason: 'bucket_changed', bucketSize: target.length });
           }
+          if (input.venueId) this.activeVenue(input.venueId);
           const from = row.bucket;
           if (from !== input.bucket) this.writeBucket(me.id, from, this.bucketIds(me.id, from).filter((id) => id !== row.bevId));
           const next = insertIntoBucket(target, row.bevId, input.insertIndex);
@@ -1743,6 +2340,15 @@ export class FakeApi implements BeviApi {
           row.createdAt = at;
           row.updatedAt = at;
           if (note !== undefined) row.note = note;
+          // Left out, the place is kept (it is keyed by user and Bev, not by this row); a venue
+          // replaces it and null removes it.
+          if (input.venueId !== undefined) this.putLocation(me.id, row.bevId, input.venueId);
+          // On the server the re-rank deletes the ranking row, its old post cascades away, and the
+          // notifications and queued pushes about that post go with it (T-31). The fake keeps the
+          // old feed event, so it drops those two here.
+          const oldPosts = new Set(this.db.feed.filter((e) => e.actorId === me.id && e.bevId === row.bevId).map((e) => e.id));
+          this.notificationRows = this.notificationRows.filter((n) => !n.feedEventId || !oldPosts.has(n.feedEventId));
+          this.pushOutbox = this.pushOutbox.filter((p) => !p.feedEventId || !oldPosts.has(p.feedEventId));
           this.logPlacement(me, row.id, row.bevId, input.comparisons, at);
           return { ranking: this.toRanking(row), bucketSize: next.length };
         },
@@ -1771,9 +2377,36 @@ export class FakeApi implements BeviApi {
           const row = this.rankingOf(me.id, bevId) ?? fail('not_found', "You haven't ranked this Bev");
           this.db.rankings = this.db.rankings.filter((r) => r !== row);
           this.writeBucket(me.id, row.bucket, this.bucketIds(me.id, row.bucket));
+          // The place goes with the ranking (bev_locations_follow_ranking_delete).
+          this.putLocation(me.id, row.bevId, null);
         },
         true,
       ),
+
+    setVenue: (bevId: string, venueId: string | null) =>
+      this.call(
+        'rankings.setVenue',
+        (): Venue | null => {
+          const me = this.requireUser();
+          const row = this.rankingOf(me.id, bevId) ?? fail('not_found', "You haven't ranked this Bev");
+          return this.putLocation(me.id, row.bevId, venueId);
+        },
+        true,
+      ),
+
+    getVenue: (bevId: string) =>
+      this.call('rankings.getVenue', (): Venue | null => {
+        const me = this.requireUser();
+        return this.rankingOf(me.id, bevId) ? this.venueOf(me.id, bevId) : null;
+      }),
+
+    locationSummary: () =>
+      this.call('rankings.locationSummary', (): BevLocationSummary => {
+        const me = this.requireUser();
+        const mine = this.db.rankings.filter((r) => r.userId === me.id);
+        const located = new Set(this.locationRows().filter((l) => l.userId === me.id).map((l) => l.bevId));
+        return { rankedCount: mine.length, locatedCount: mine.filter((r) => located.has(r.bevId)).length };
+      }),
   };
 
   // -------------------------------------------------------------------------
@@ -1857,7 +2490,7 @@ export class FakeApi implements BeviApi {
     for (const e of events) {
       const actor = this.db.users.find((u) => u.id === e.actorId);
       const bev = this.db.bevs.find((b) => b.id === e.bevId);
-      if (!actor || !bev || !this.visible(bev, me)) continue;
+      if (!actor || !bev || !this.visible(bev, me) || this.blockedBetween(me.id, actor.id)) continue;
       // The feed carries rankings only (contract 2.0.0): a save is never a post.
       const r = e.type === 'RANKING' ? this.rankingOf(e.actorId, e.bevId) : undefined;
       if (!r) continue; // ranking since removed
@@ -1873,12 +2506,13 @@ export class FakeApi implements BeviApi {
         inMyWantToTry: saved.has(bev.id),
         likeCount: likes.filter((l) => l.feedEventId === e.id).length,
         likedByMe: likes.some((l) => l.feedEventId === e.id && l.userId === me.id),
-        commentCount: this.liveComments(e.id).length,
+        commentCount: this.liveComments(e.id, me).length,
         // The first seven, oldest first, as get_feed returns them.
-        comments: this.liveComments(e.id).slice(0, FEED_INLINE_COMMENTS).map((c) => this.toComment(c, me)),
+        comments: this.liveComments(e.id, me).slice(0, FEED_INLINE_COMMENTS).map((c) => this.toComment(c, me)),
         // Relative to the caller, whoever's page this is. The Bev is visible to `me` (checked
         // above), which is the only age gate the SQL applies to it too.
         ...this.alsoBevd(me, e.actorId, bev.id),
+        venue: this.venueOf(e.actorId, bev.id),
       });
     }
     return items;
@@ -1897,7 +2531,7 @@ export class FakeApi implements BeviApi {
     for (const id of direct) for (const id2 of following(id)) twoHops.add(id2);
     const candidates =
       this.db.users.length < EXPLORE_GLOBAL_FALLBACK_USERS ? this.db.users.map((u) => u.id) : [...twoHops];
-    return new Set(candidates.filter((id) => id !== me.id && !direct.has(id)));
+    return new Set(candidates.filter((id) => id !== me.id && !direct.has(id) && !this.blockedBetween(me.id, id)));
   }
 
   /**
@@ -1935,6 +2569,7 @@ export class FakeApi implements BeviApi {
           note: r.note,
           createdAt: e.createdAt,
           inMyWantToTry: saved.has(bev.id),
+          venue: this.venueOf(e.actorId, bev.id),
         },
       });
     }
@@ -1953,7 +2588,7 @@ export class FakeApi implements BeviApi {
     listUser: (userId: string, page?: PageParams) =>
       this.call('feed.listUser', () => {
         const me = this.requireUser();
-        this.user(userId);
+        this.visibleUser(userId, me);
         // feed_event_visible: only the caller's own and followed users' posts; anyone else's page is empty.
         const actors = this.feedActors(me).has(userId) ? new Set([userId]) : new Set<string>();
         return paginate(this.feedItems(me, actors), page, 20);
@@ -2018,14 +2653,26 @@ export class FakeApi implements BeviApi {
         return { day: winner((d) => d), week: winner(isoWeekStart) };
       }),
 
+    // get_post (T-31): the one post, exactly as this caller's feed would show it, or not_found when
+    // it is gone or not theirs to see (feed_event_visible: own or followed, no block, the age gate).
+    getPost: (id: string) =>
+      this.call('feed.getPost', (): FeedItem => {
+        const me = this.requireUser();
+        const e = this.visibleFeedEvent(id, me);
+        return this.feedItems(me, new Set([e.actorId])).find((item) => item.id === e.id) ?? fail('not_found', 'No such post');
+      }),
+
     like: (id: string) =>
       this.call(
         'feed.like',
         () => {
           const me = this.requireUser();
-          this.visibleFeedEvent(id, me);
+          const e = this.visibleFeedEvent(id, me);
           const likes = (this.db.likes ??= []);
-          if (!likes.some((l) => l.userId === me.id && l.feedEventId === id)) likes.push({ userId: me.id, feedEventId: id });
+          if (!likes.some((l) => l.userId === me.id && l.feedEventId === id)) {
+            likes.push({ userId: me.id, feedEventId: id });
+            this.notify(e.actorId, me.id, 'like', id, null);
+          }
         },
         true,
       ),
@@ -2063,7 +2710,7 @@ export class FakeApi implements BeviApi {
           if (!m) invalid('cursor', 'Malformed cursor');
           before = Number(m[1]);
         }
-        const rows = this.liveComments(eventId)
+        const rows = this.liveComments(eventId, me)
           .reverse()
           .filter((c) => commentSeq(c) < before)
           .slice(0, limit);
@@ -2079,13 +2726,14 @@ export class FakeApi implements BeviApi {
         'comments.add',
         () => {
           const me = this.requireUser();
-          this.visibleFeedEvent(eventId, me);
+          const e = this.visibleFeedEvent(eventId, me);
           // btrim(body, E' \t\n\r'), then 1–280 characters (code points, like char_length).
           const text = (body ?? '').replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '');
           const length = Array.from(text).length;
           if (length < 1 || length > COMMENT_MAX) invalid('body', `A comment is 1 to ${COMMENT_MAX} characters`);
           const row: FakeComment = { id: this.nextId('comment'), feedEventId: eventId, userId: me.id, body: text, createdAt: this.nowIso() };
           (this.db.comments ??= []).push(row);
+          this.notify(e.actorId, me.id, 'comment', eventId, row.id);
           return this.toComment(row, me);
         },
         true,
@@ -2139,7 +2787,11 @@ export class FakeApi implements BeviApi {
     users: (page?: PageParams) =>
       this.call('leaderboard.users', () => {
         const me = this.requireUser();
-        const rows = this.userBoard().map((r) => ({
+        // get_user_leaderboard (IS-7): rows across a block drop out, and the others keep their global
+        // rank rather than being renumbered.
+        const rows = this.userBoard()
+          .filter((r) => !this.blockedBetween(me.id, r.u.id))
+          .map((r) => ({
           rank: r.rank,
           profile: this.toProfile(r.u, me),
           points: r.points,
@@ -2303,6 +2955,140 @@ export class FakeApi implements BeviApi {
         }
         return [...names].sort(compareCodePoints);
       }),
+
+    // BEV-22. As `venues_search`: no query answers "what is near", a query matches names in three
+    // tiers (it starts a word of the name; every word is in the name, address or neighbourhood;
+    // the name is merely similar), the nearest first within the first two.
+    search: ({ query, near, limit }) =>
+      this.call('venues.search', (): VenueMatch[] => {
+        this.requireUser();
+        if ((query ?? '').length > 80) invalid('query', 'Search for something shorter');
+        const pos = near && Number.isFinite(near.lat) && Number.isFinite(near.lng) ? near : null;
+        if (pos && (Math.abs(pos.lat) > 90 || Math.abs(pos.lng) > 180)) invalid('position', 'Not a position');
+        const cap = Math.min(Math.max(limit ?? 20, 1), 50);
+        const q = foldPlace(query ?? '');
+        const tokens = q.split(' ');
+
+        const rows = this.venueRows()
+          .filter((v) => !v.hidden)
+          .flatMap((v) => {
+            const d = pos ? distanceMeters(pos, v) : null;
+            if (!q) return pos ? [{ v, d, tier: 0, sim: 0 }] : [];
+            const name = foldPlace(v.name);
+            const hay = foldPlace(`${v.name} ${v.address ?? ''} ${v.neighborhood ?? ''}`);
+            const sim = trigramSimilarity(name, q);
+            const tier = ` ${name}`.includes(` ${q}`) ? 0 : tokens.every((t) => hay.includes(t)) ? 1 : 2;
+            return tier < 2 || sim >= PLACE_SIMILARITY_MIN ? [{ v, d, tier, sim }] : [];
+          })
+          .sort(
+            (a, z) =>
+              a.tier - z.tier ||
+              (a.tier === 2 ? z.sim - a.sim : 0) ||
+              (a.d ?? Infinity) - (z.d ?? Infinity) ||
+              z.sim - a.sim ||
+              compareCodePoints(a.v.name, z.v.name) ||
+              compareCodePoints(a.v.id, z.v.id),
+          );
+        return rows.slice(0, cap).map(({ v, d }) => ({ venue: this.toVenue(v), distanceMeters: d === null ? null : Math.round(d) }));
+      }),
+
+    // The outside directory is `db.externalPlaces`: a name match, the nearest first.
+    searchMore: ({ query, near }) =>
+      this.call('venues.searchMore', (): ExternalPlace[] => {
+        this.requireUser();
+        const q = foldPlace(query ?? '');
+        if (!q) invalid('query', 'Type a place to search for');
+        if (q.length > 80) invalid('query', 'Search for something shorter');
+        const pos = near && Number.isFinite(near.lat) && Number.isFinite(near.lng) ? near : null;
+        return (this.db.externalPlaces ?? [])
+          .filter((p) => foldPlace(`${p.name} ${p.address ?? ''}`).includes(q))
+          .map((p) => ({ ...p, distanceMeters: pos ? Math.round(distanceMeters(pos, p)) : null }))
+          .sort((a, z) => (a.distanceMeters ?? Infinity) - (z.distanceMeters ?? Infinity) || compareCodePoints(a.name, z.name));
+      }),
+
+    // As `upsert_google_venue`: the venue already made from this place, else one of the same name
+    // within 75 m, else a new one.
+    addPlace: (placeId: string) =>
+      this.call(
+        'venues.addPlace',
+        (): Venue => {
+          this.requireUser();
+          const place = (this.db.externalPlaces ?? []).find((p) => p.placeId === placeId) ?? fail('not_found', 'No such place');
+          const venues = (this.db.venues ??= []);
+          const id = `venue-ext-${place.placeId}`;
+          const existing =
+            venues.find((v) => v.id === id) ??
+            venues.find((v) => foldPlace(v.name) === foldPlace(place.name) && distanceMeters(v, place) <= 75);
+          if (existing) return existing.hidden ? fail('not_found', 'No such place') : this.toVenue(existing);
+          const made: FakeVenue = {
+            id,
+            name: place.name,
+            kind: 'craft',
+            placeType: place.placeType,
+            lat: place.lat,
+            lng: place.lng,
+            address: place.address,
+            neighborhood: null,
+            borough: null,
+            hoursOsm: null,
+            hoursKnown: false,
+            website: null,
+          };
+          venues.push(made);
+          return this.toVenue(made);
+        },
+        true,
+      ),
+
+    // As `recent_bev_venues`: the caller's own places by when each was set, newest first, each once.
+    // `putLocation` appends, so the rows are already in the order they were set.
+    recent: (params) =>
+      this.call('venues.recent', (): Venue[] => {
+        const me = this.requireUser();
+        const limit = Math.min(Math.max(Math.trunc(params?.limit ?? 5), 1), 20);
+        const seen = new Set<string>();
+        const out: Venue[] = [];
+        for (const row of [...this.locationRows()].reverse()) {
+          if (row.userId !== me.id || seen.has(row.venueId)) continue;
+          seen.add(row.venueId);
+          const venue = this.venueRows().find((v) => v.id === row.venueId && !v.hidden);
+          if (venue) out.push(this.toVenue(venue));
+        }
+        return out.slice(0, limit);
+      }),
+
+    // As `bevd_map`: one pin per venue, the most recent first.
+    bevdMap: (params) =>
+      this.call('venues.bevdMap', (): BevdPin[] => {
+        const me = this.requireUser();
+        const scope = params?.scope ?? 'all';
+        if (!BEVD_SCOPES.includes(scope)) invalid('scope', 'Unknown scope');
+        const pins = new Map<string, BevdPin>();
+        for (const { ranking, venue } of this.scopedLocations(me, scope)) {
+          const pin = pins.get(venue.id) ?? { venue: this.toVenue(venue), bevCount: 0, mineCount: 0, latestAt: ranking.createdAt };
+          pin.bevCount += 1;
+          if (ranking.userId === me.id) pin.mineCount += 1;
+          if (ranking.createdAt > pin.latestAt) pin.latestAt = ranking.createdAt;
+          pins.set(venue.id, pin);
+        }
+        return [...pins.values()].sort((a, z) => z.latestAt.localeCompare(a.latestAt) || compareCodePoints(a.venue.id, z.venue.id));
+      }),
+
+    // As `bevd_at_venue` plus packages/api's join: who had what there, the most recent first.
+    bevdAt: (venueId, params) =>
+      this.call('venues.bevdAt', (): BevdAtVenue => {
+        const me = this.requireUser();
+        const scope = params?.scope ?? 'all';
+        if (!BEVD_SCOPES.includes(scope)) invalid('scope', 'Unknown scope');
+        const venue = this.activeVenue(venueId);
+        const items = this.scopedLocations(me, scope)
+          .filter((x) => x.venue.id === venue.id)
+          .sort((a, z) => z.ranking.createdAt.localeCompare(a.ranking.createdAt) || compareCodePoints(a.ranking.id, z.ranking.id))
+          .map(({ ranking }): BevdHere => ({ user: this.toProfile(this.user(ranking.userId), me), ranking: this.toRanked(ranking) }));
+        // Nothing in scope: there was no pin to have tapped.
+        if (items.length === 0) fail('not_found', 'Nothing was had at this venue');
+        return { venue: this.toVenue(venue), items };
+      }),
   };
 
   // -------------------------------------------------------------------------
@@ -2316,6 +3102,9 @@ export class FakeApi implements BeviApi {
   bugs: BugsApi = {
     canReport: () =>
       this.call('bugs.canReport', () => (this.sessionUser() ? this.internalReporter : false)),
+
+    canRank: () =>
+      this.call('bugs.canRank', () => (this.sessionUser() ? this.internalReporter && this.bugRanker : false)),
 
     report: (input) =>
       this.call(
@@ -2333,7 +3122,9 @@ export class FakeApi implements BeviApi {
           // and the function keeps the first six, so the fake (which stores none) has nothing to do.
           for (const item of evidence) {
             if (!BUG_EVIDENCE_MIME_TYPES.includes(item.mimeType)) invalid('evidence', 'Attach a JPEG, PNG or WebP image');
-            if (typeof item.file?.size === 'number' && item.file.size > UPLOAD_MAX_BYTES) {
+            // Contract 3.3.0: evidence is an UploadPayload, measured like media.upload's file.
+            const fileBytes = item.file instanceof ArrayBuffer || ArrayBuffer.isView(item.file) ? item.file.byteLength : item.file?.size;
+            if (typeof fileBytes === 'number' && fileBytes > UPLOAD_MAX_BYTES) {
               invalid('evidence', 'That screenshot is too large');
             }
           }
@@ -2387,6 +3178,10 @@ export class FakeApi implements BeviApi {
           if (!BUG_TICKET_RE.test(ticketId?.trim() ?? '')) invalid('ticketId', 'That is not a ticket identifier');
           const entry = [...this.bugLedger.values()].find((e) => e.userId === me.id && e.summary.ticketId === ticketId.trim());
           if (!entry) fail('not_found', "That ticket isn't one of yours");
+          // Only a ticket in review can be verified, for every caller, as the verify route checks.
+          if (entry.summary.state !== 'in_review') {
+            fail('conflict', "That report isn't waiting for your check", { reason: 'not_in_review' });
+          }
           entry.summary = { ...entry.summary, state: 'done', stateLabel: 'Done', updatedAt: this.now().toISOString(), rank: null };
           return { ...entry.summary };
         },
@@ -2405,6 +3200,8 @@ export class FakeApi implements BeviApi {
           if (after !== null && !BUG_TICKET_RE.test(after)) invalid('afterTicketId', 'That is not a ticket identifier');
           if (after === id) invalid('afterTicketId', 'A ticket cannot be placed after itself');
           if (!this.internalReporter) fail('unauthorized', 'This account cannot file internal bug reports');
+          // Ranking is a founder's act: a tester is refused, as the place route's not_allowed is.
+          if (!this.bugRanker) fail('unauthorized', 'This account cannot rank reports', { reason: 'not_allowed' });
 
           // Both must be the caller's own tickets (else not_found, which says nothing about anyone
           // else's), and both open (else conflict with reason 'not_open'), as the function checks.
@@ -2441,7 +3238,273 @@ export class FakeApi implements BeviApi {
       ),
   };
 
+  // -------------------------------------------------------------------------
+  // Blocks and content reports (IS-7), as block_user / unblock_user / list_blocked_users /
+  // report_content do them (20261118220000). No rate limits, as elsewhere in the fake.
+  // -------------------------------------------------------------------------
+
+  blocks: BlocksApi = {
+    block: (userId: string) =>
+      this.call(
+        'blocks.block',
+        () => {
+          const me = this.requireUser();
+          if (userId === me.id) invalid('cannot block self', "You can't block yourself");
+          this.user(userId);
+          if (!this.blockRows.some((b) => b.blockerId === me.id && b.blockedId === userId)) {
+            this.blockRows.push({ blockerId: me.id, blockedId: userId, createdAt: this.nowIso() });
+          }
+          // Both follow edges go, and unblocking never brings them back.
+          this.db.follows = this.db.follows.filter(
+            (f) => !(f.followerId === me.id && f.followeeId === userId) && !(f.followerId === userId && f.followeeId === me.id),
+          );
+          this.dropPostSubscription(me.id, userId);
+          this.dropPostSubscription(userId, me.id);
+        },
+        true,
+      ),
+
+    unblock: (userId: string) =>
+      this.call(
+        'blocks.unblock',
+        () => {
+          const me = this.requireUser();
+          // Only the caller's own block; a block made against them is untouched (and unseen).
+          this.blockRows = this.blockRows.filter((b) => !(b.blockerId === me.id && b.blockedId === userId));
+        },
+        true,
+      ),
+
+    list: (page?: PageParams) =>
+      this.call('blocks.list', () => {
+        const me = this.requireUser();
+        // One direction only: the people the caller blocked, newest first, then by id.
+        const rows = this.blockRows
+          .map((b, written) => ({ b, written }))
+          .filter(({ b }) => b.blockerId === me.id)
+          .sort((a, z) => z.b.createdAt.localeCompare(a.b.createdAt) || z.written - a.written)
+          .flatMap(({ b }): BlockedUser[] => {
+            const u = this.db.users.find((x) => x.id === b.blockedId);
+            return u ? [{ ...this.toProfile(u, me), birthdate: null, canSeeAlcohol: false, blockedAt: b.createdAt }] : [];
+          });
+        return paginate(rows, page, 50);
+      }),
+  };
+
+  reports: ReportsApi = {
+    report: (input: ReportContentInput) =>
+      this.call(
+        'reports.report',
+        (): ReportContentResult => {
+          const me = this.requireUser();
+          if (!REPORT_REASONS.includes(input.reason)) invalid('reason', 'Unknown reason');
+          // btrim(note, E' \t\n\r'); blank is no note; at most REPORT_NOTE_MAX code points.
+          const note = (input.note ?? '').replace(/^[ \t\n\r]+|[ \t\n\r]+$/g, '') || null;
+          if (note && Array.from(note).length > REPORT_NOTE_MAX) invalid('note', `A note is at most ${REPORT_NOTE_MAX} characters`);
+
+          // Anything the caller can be shown (20261119100000), or by someone the caller blocked (one
+          // direction: so Block then Report works, and a blocked person cannot probe the blocker's
+          // content -- every "shown" rule below is false across a block either way).
+          const iBlocked = (userId: string) => this.blockRows.some((b) => b.blockerId === me.id && b.blockedId === userId);
+          const feedShows = (eventId: string) => {
+            try {
+              this.visibleFeedEvent(eventId, me);
+              return true;
+            } catch (e) {
+              if (e instanceof ApiError && e.code === 'not_found') return false;
+              throw e;
+            }
+          };
+          let subject: string;
+          if (input.kind === 'post') {
+            const e = this.db.feed.find((x) => x.id === input.id) ?? fail('not_found', 'No such post');
+            // The feed's rule (feed, a profile's posts), or Explore's: the same rows getExplore
+            // returns. Neither has a recency bound in the fake, matching the SQL's choice.
+            const shown = feedShows(e.id) || this.explorePosts(me).some((p) => p.id === e.id);
+            if (!iBlocked(e.actorId) && !shown) fail('not_found', 'No such post');
+            subject = e.actorId;
+          } else if (input.kind === 'comment') {
+            const c = (this.db.comments ?? []).find((x) => x.id === input.id && !x.deleted) ?? fail('not_found', 'No such comment');
+            // Comments are never in Explore (D-15): a visible post, and an author not across a block.
+            const shown = feedShows(c.feedEventId) && !this.blockedBetween(me.id, c.userId);
+            if (!iBlocked(c.userId) && !shown) fail('not_found', 'No such comment');
+            subject = c.userId;
+          } else if (input.kind === 'profile') {
+            subject = this.user(input.id).id;
+          } else {
+            invalid('target', 'Unknown report kind');
+          }
+          if (subject === me.id) invalid('cannot report own content', "You can't report yourself");
+
+          // One report per (reporter, content): a repeat answers with the first one's id.
+          const existing = this.contentReports.find((r) => r.reporterId === me.id && r.kind === input.kind && r.targetId === input.id);
+          if (existing) return { reportId: existing.id };
+          const id = String(this.nextContentReport++);
+          this.contentReports.push({
+            id,
+            reporterId: me.id,
+            kind: input.kind,
+            targetId: input.id,
+            reportedUserId: subject,
+            reason: input.reason,
+            note,
+            createdAt: this.nowIso(),
+          });
+          return { reportId: id };
+        },
+        true,
+      ),
+  };
+
+  // The notifications inbox (T-31), as get_notifications / get_unread_notification_count /
+  // mark_notifications_read answer it (20261126000100). One set of rules (visibleNotifications)
+  // behind all three, so the list, the badge and mark-read never disagree.
+  notifications: NotificationsApi = {
+    list: (page?: PageParams) =>
+      this.call('notifications.list', (): Page<Notification> => {
+        const me = this.requireUser();
+        // Keyset on the row's id (its newest notification), like get_notifications' p_before_id.
+        const limit = clamp(Math.floor(page?.limit ?? 20), 1, NOTIFICATIONS_PAGE_MAX);
+        let before = Infinity;
+        if (page?.cursor) {
+          const m = /^n:(\d+)$/.exec(page.cursor);
+          if (!m) invalid('cursor', 'Malformed cursor');
+          before = Number(m[1]);
+        }
+        const rows = this.notificationGroups(me)
+          .filter((g) => g.head.id < before)
+          .slice(0, limit);
+        const last = rows[rows.length - 1];
+        return {
+          items: rows.map((g) => this.toNotification(g, me)),
+          nextCursor: rows.length === limit && last ? `n:${last.head.id}` : null,
+        };
+      }),
+
+    unreadCount: () =>
+      this.call('notifications.unreadCount', () => {
+        const me = this.requireUser();
+        // A row of likes counts once, as it is one row on the screen.
+        return this.notificationGroups(me).filter((g) => g.members.some((m) => m.readAt === null)).length;
+      }),
+
+    markRead: (upToId?: string) =>
+      this.call(
+        'notifications.markRead',
+        () => {
+          const me = this.requireUser();
+          if (upToId !== undefined && !NOTIFICATION_ID_RE.test(upToId)) invalid('upToId', 'That is not a notification id');
+          const upTo = upToId === undefined ? Infinity : Number(upToId);
+          const at = this.nowIso();
+          // Only what the caller could have been shown: a hidden row comes back unread.
+          for (const n of this.visibleNotifications(me)) if (n.readAt === null && n.id <= upTo) n.readAt = at;
+        },
+        true,
+      ),
+
+    // T-31 Release 2 (20261127000100): push settings, post subscriptions, device tokens.
+    getSettings: () =>
+      this.call('notifications.getSettings', () => this.notificationSettingsOf(this.requireUser().id)),
+
+    updateSettings: (settings: NotificationSettings) =>
+      this.call(
+        'notifications.updateSettings',
+        (): NotificationSettings => {
+          const me = this.requireUser();
+          for (const field of NOTIFICATION_SETTING_FIELDS) {
+            if (typeof settings?.[field] !== 'boolean') invalid(field, `${field} must be true or false`);
+          }
+          const stored: NotificationSettings = {
+            paused: settings.paused,
+            follows: settings.follows,
+            likes: settings.likes,
+            comments: settings.comments,
+            posts: settings.posts,
+          };
+          this.notificationSettingsRows.set(me.id, stored);
+          return { ...stored };
+        },
+        true,
+      ),
+
+    // get_post_notification_people: the people the caller follows, none across a block, chosen
+    // first, then by handle in code-point order; `q` a case-insensitive substring of the handle or
+    // the display name, a leading '@' ignored.
+    listPostNotificationPeople: (params?: PageParams & { q?: string }) =>
+      this.call('notifications.listPostNotificationPeople', (): Page<PostNotificationPerson> => {
+        const me = this.requireUser();
+        const raw = (params?.q ?? '').trim();
+        if (raw.length > POST_PEOPLE_QUERY_MAX) invalid('q', `Search is up to ${POST_PEOPLE_QUERY_MAX} characters`);
+        const q = raw.replace(/^@+/, '').toLowerCase();
+        const subscribed = (id: string) => this.postSubscriptions.some((s) => s.subscriberId === me.id && s.targetId === id);
+        const rows = this.db.follows
+          .filter((f) => f.followerId === me.id && !this.blockedBetween(me.id, f.followeeId))
+          .flatMap((f) => {
+            const u = this.db.users.find((x) => x.id === f.followeeId);
+            return u ? [u] : [];
+          })
+          .filter((u) => !q || u.handle.toLowerCase().includes(q) || u.displayName.toLowerCase().includes(q))
+          .map((u): PostNotificationPerson => ({ ...this.toRow(u, me), subscribed: subscribed(u.id) }))
+          .sort(
+            (a, z) => Number(z.subscribed) - Number(a.subscribed) || compareCodePoints(a.handle, z.handle) || compareCodePoints(a.id, z.id),
+          );
+        // packages/api asks for clampLimit's default, 20.
+        return paginate(rows, params, 20);
+      }),
+
+    setPostNotification: (userId: string, on: boolean) =>
+      this.call(
+        'notifications.setPostNotification',
+        () => {
+          const me = this.requireUser();
+          if (!on) {
+            this.dropPostSubscription(me.id, userId);
+            return;
+          }
+          // No follow edge is always "not following": someone missing, yourself, and someone across
+          // a block (a block removes the follow) read the same, so the answer reveals no block.
+          if (!this.isFollowing(me.id, userId)) invalid('not following', 'You can only choose people you follow');
+          // Only a follow standing beside a block is left, which no API path creates.
+          this.visibleUser(userId, me);
+          if (!this.postSubscriptions.some((s) => s.subscriberId === me.id && s.targetId === userId)) {
+            this.postSubscriptions.push({ subscriberId: me.id, targetId: userId });
+          }
+        },
+        true,
+      ),
+
+    registerPushToken: (token: string) =>
+      this.call(
+        'notifications.registerPushToken',
+        () => {
+          const me = this.requireUser();
+          if (typeof token !== 'string' || token.length > PUSH_TOKEN_MAX || !PUSH_TOKEN_RE.test(token)) {
+            invalid('token', 'That is not an Expo push token');
+          }
+          // One device, one account: a token someone else registered moves to the caller.
+          this.pushTokenRows = this.pushTokenRows.filter((t) => t.token !== token);
+          this.pushTokenRows.push({ token, userId: me.id, seen: ++this.pushSeq });
+          // This one and the nine others seen most recently.
+          const keep = new Set(this.pushTokens(me.id).slice(0, PUSH_TOKENS_PER_USER));
+          this.pushTokenRows = this.pushTokenRows.filter((t) => t.userId !== me.id || keep.has(t.token));
+        },
+        true,
+      ),
+
+    unregisterPushToken: (token: string) =>
+      this.call(
+        'notifications.unregisterPushToken',
+        () => {
+          const me = this.requireUser();
+          // Only the caller's own; anything else is a no-op.
+          this.pushTokenRows = this.pushTokenRows.filter((t) => !(t.token === token && t.userId === me.id));
+        },
+        true,
+      ),
+  };
+
   meta: MetaApi = {
-    getAppConfig: () => this.call('meta.getAppConfig', () => ({ minAppVersion: '0.1.0', maintenance: false })),
+    // Signed out too, like the server's: no session check.
+    getAppConfig: () => this.call('meta.getAppConfig', () => this.appConfig),
   };
 }

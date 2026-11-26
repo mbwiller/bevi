@@ -391,6 +391,8 @@ function feedClient(rows: FeedRpcRow[], calls: Array<[string, unknown]> = []): S
     auth,
     storage,
     rpc: (name: string, args: unknown) => {
+      // The page's read of where each Bev was had (BEV-22, places.ts): nobody said.
+      if (name === 'get_bev_locations') return Promise.resolve({ data: [], error: null });
       calls.push([name, args]);
       return Promise.resolve({ data: rows, error: null });
     },

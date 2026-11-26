@@ -17,6 +17,7 @@ const venue: Venue = {
   id: 'v',
   name: 'Yorkville Coffee Works',
   kind: 'craft',
+  placeType: 'cafe',
   lat: 40.77,
   lng: -73.95,
   address: '1512 2nd Avenue',

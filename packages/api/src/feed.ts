@@ -9,6 +9,7 @@ import {
   type Page,
   type PageParams,
   type Profile,
+  type Venue,
 } from '@bevi/shared';
 import { mapError } from './errors';
 import { requireUserId } from './currentUser';
@@ -25,6 +26,7 @@ import {
   type ProfileViewRow,
 } from './mappers';
 import { clampLimit, decodeCursor, encodeCursor } from './paging';
+import { loadVenuesForPairs, venueKey } from './places';
 
 interface FeedCursor {
   beforeId: number;
@@ -81,10 +83,22 @@ function actorOf(actorById: Map<string, Profile>, rpc: string, row: { id: number
   return actor;
 }
 
+/** Where each row's actor had its Bev, in one round trip (BEV-22; places.ts). */
+function loadVenues(client: SupabaseClient, rows: { actor_id: string; bev_id: string | null }[]): Promise<Map<string, Venue>> {
+  return loadVenuesForPairs(
+    client,
+    rows.flatMap((r) => (r.bev_id ? [{ userId: r.actor_id, bevId: r.bev_id }] : [])),
+  );
+}
+
+function venueOf(venues: Map<string, Venue>, row: { actor_id: string; bev_id: string | null }): Venue | null {
+  return (row.bev_id ? venues.get(venueKey(row.actor_id, row.bev_id)) : undefined) ?? null;
+}
+
 /** get_feed and get_user_feed rows (same columns) → a page of FeedItems, actors joined from profiles_view. */
 async function toFeedPage(client: SupabaseClient, rpc: string, rows: FeedRpcRow[], limit: number): Promise<Page<FeedItem>> {
-  const actorById = await loadActors(client, rows);
-  const items = rows.map((row) => mapFeedItem(client, row, actorOf(actorById, rpc, row)));
+  const [actorById, venues] = await Promise.all([loadActors(client, rows), loadVenues(client, rows)]);
+  const items = rows.map((row) => mapFeedItem(client, row, actorOf(actorById, rpc, row), venueOf(venues, row)));
 
   const last = rows[rows.length - 1];
   const nextCursor = rows.length === limit && last ? encodeCursor({ beforeId: last.id } satisfies FeedCursor) : null;
@@ -138,8 +152,10 @@ export function createFeedApi(client: SupabaseClient): FeedApi {
       if (error) throw mapError(error);
 
       const rows = (data ?? []) as ExploreRpcRow[];
-      const actorById = await loadActors(client, rows);
-      const items = rows.map((row) => mapExplorePost(client, row, actorOf(actorById, 'get_explore', row)));
+      const [actorById, venues] = await Promise.all([loadActors(client, rows), loadVenues(client, rows)]);
+      const items = rows.map((row) =>
+        mapExplorePost(client, row, actorOf(actorById, 'get_explore', row), venueOf(venues, row)),
+      );
       const nextCursor =
         rows.length === limit ? encodeCursor({ before, offset: offset + rows.length } satisfies ExploreCursor) : null;
       return { items, nextCursor };
@@ -176,6 +192,24 @@ export function createFeedApi(client: SupabaseClient): FeedApi {
       const { data, error } = await client.rpc('get_bev_of_period');
       if (error) throw mapError(error);
       return mapBevOfPeriod(client, (data ?? []) as BevOfPeriodRpcRow[]);
+    },
+
+    async getPost(id: string): Promise<FeedItem> {
+      await requireUserId(client);
+      // `get_post` takes a bigint: an id that cannot be one is no post at all,
+      // answered here as the RPC would answer it, without the round trip.
+      if (!/^\d{1,15}$/.test(id ?? '')) throw new ApiError('not_found', 'No such post');
+      const { data, error } = await client.rpc('get_post', { p_event_id: Number(id) });
+      // No PGRST202 tolerance: an older backend has no inbox to open a post
+      // from, and the caller shows its error state.
+      if (error) throw mapError(error);
+      const rows = (data ?? []) as FeedRpcRow[];
+      if (rows.length === 0) throw new ApiError('not_found', 'No such post');
+      // The same path as a feed page: actors from profiles_view, places from get_bev_locations.
+      const page = await toFeedPage(client, 'get_post', rows.slice(0, 1), 1);
+      const item = page.items[0];
+      if (!item) throw new ApiError('not_found', 'No such post');
+      return item;
     },
 
     async like(id: string): Promise<void> {

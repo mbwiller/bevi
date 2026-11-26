@@ -73,7 +73,8 @@ describe('Filed reports', () => {
     await renderSheet();
 
     expect(await screen.findByText('Open')).toBeTruthy();
-    const open = screen.getAllByRole('link').map((l) => l.props.accessibilityLabel as string);
+    // The rows are links once canRank has answered (a founder); wait for that, not just the list.
+    const open = (await screen.findAllByRole('link')).map((l) => l.props.accessibilityLabel as string);
     expect(open.slice(0, 3)).toEqual([
       expect.stringMatching(/^Number 1, Ticket A, /),
       expect.stringMatching(/^Number 2, Ticket C, /),
@@ -171,13 +172,87 @@ describe('Filed reports', () => {
     const list = jest.spyOn(api.bugs, 'listMine').mockImplementation(async () => (await real()).map((r) => ({ ...r, rank: null })));
     await renderSheet();
     expect(await screen.findByText('Open')).toBeTruthy();
-    const links = screen.getAllByRole('link').map((l) => l.props.accessibilityLabel as string);
+    const links = (await screen.findAllByRole('link')).map((l) => l.props.accessibilityLabel as string);
     expect(links).toEqual([
       expect.stringMatching(new RegExp(`^Third filed, ${c} · `)),
       expect.stringMatching(new RegExp(`^Second filed, ${b} · Status unavailable · `)),
       expect.stringMatching(new RegExp(`^First filed, ${a} · `)),
     ]);
     expect(screen.queryByText('Nothing filed yet')).toBeNull();
+    list.mockRestore();
+  });
+});
+
+describe('Filed reports for a tester (reports, does not rank, has no board login)', () => {
+  beforeEach(() => controls.setTesterReporter());
+
+  it('lists open tickets newest first, with no rank, no Place and no link to the board', async () => {
+    const a = await file('First filed');
+    const b = await file('Second filed');
+    const c = await file('Third filed');
+    addUnplaced(a);
+    addUnplaced(b);
+    await renderSheet();
+
+    expect(await screen.findByText('Open')).toBeTruthy();
+    expect(await screen.findByLabelText(new RegExp(`^Third filed, ${c} · `))).toBeTruthy();
+    const rows = [
+      screen.getByLabelText(new RegExp(`^Third filed, ${c} · `)),
+      screen.getByLabelText(new RegExp(`^Second filed, ${b} · `)),
+      screen.getByLabelText(new RegExp(`^First filed, ${a} · `)),
+    ];
+    // Plain text, not a link: the ticket id is still there, in the meta line.
+    expect(screen.queryAllByRole('link')).toEqual([]);
+    expect(screen.getByText(new RegExp(`^${a} · New · `))).toBeTruthy();
+    // Newest first, as rendered.
+    const all = screen.getAllByLabelText(/ filed, T-\d+ · /).map((n) => n.props.accessibilityLabel as string);
+    expect(all).toEqual(rows.map((r) => r.props.accessibilityLabel as string));
+    expect(all[0]).toMatch(/^Third filed/);
+
+    expect(screen.queryByText(/^#\d+$/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Place / })).toBeNull();
+    expect(screen.queryByText(/^Place \d+ reports?$/)).toBeNull();
+
+    await fireEvent.press(rows[0]!);
+    expect(mockOpenURL).not.toHaveBeenCalled();
+  });
+
+  it('still confirms a fix once the ticket is in review', async () => {
+    const d = await file('Fixed thing');
+    controls.setBugTicketState(d, 'in_review');
+    await renderSheet();
+    await fireEvent.press(await screen.findByRole('button', { name: `Verified on device: ${d}` }));
+    await fireEvent.press(screen.getByRole('button', { name: `Yes, ${d} is fixed` }));
+    await fireEvent.press(await screen.findByLabelText('Closed, 1'));
+    expect(screen.getByText('Fixed thing')).toBeTruthy();
+  });
+
+  it('says nothing about ranking when empty', async () => {
+    await renderSheet();
+    expect(await screen.findByText('Reports you send show up here with their status.')).toBeTruthy();
+  });
+});
+
+describe('Verified on device on a ticket that has left review', () => {
+  it('shows the failure, and the refetched list puts the ticket where it is now', async () => {
+    const d = await file('Moved back');
+    controls.setBugTicketState(d, 'in_review');
+    await renderSheet();
+    await fireEvent.press(await screen.findByRole('button', { name: `Verified on device: ${d}` }));
+    // A founder sends it back to Ready on the board meanwhile.
+    controls.setBugTicketState(d, 'todo');
+    // The refetch is held until the failure has been seen, so the test sees both in order.
+    const real = api.bugs.listMine.bind(api.bugs);
+    let release: () => void = () => {};
+    const list = jest
+      .spyOn(api.bugs, 'listMine')
+      .mockImplementationOnce(() => new Promise((resolve) => (release = () => resolve(real()))));
+    await fireEvent.press(screen.getByRole('button', { name: `Yes, ${d} is fixed` }));
+    expect(await screen.findByText(/^Couldn't mark it verified\./)).toBeTruthy();
+    await waitFor(() => expect(list).toHaveBeenCalled());
+    await act(async () => release());
+    await waitFor(() => expect(screen.queryByText('In review')).toBeNull());
+    expect(screen.getByLabelText(new RegExp(`Moved back, ${d} · Todo · `))).toBeTruthy();
     list.mockRestore();
   });
 });

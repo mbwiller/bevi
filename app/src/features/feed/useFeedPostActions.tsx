@@ -6,8 +6,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useAddWantToTry, useMe, useRemoveWantToTry, useToggleLike, type LikeVars } from '@/api/hooks';
 import { keys } from '@/api/keys';
 import { categoryById } from '@/lib/categories';
+import { openPlace } from '@/features/places/openPlace';
 
 import { FeedPostItem } from './FeedPostItem';
+import { useSafetyTarget } from '../safety/useSafetyTarget';
 import { likeErrorMessage } from './likeError';
 
 /** What the feed says when a post's comments turn out to be on a post that's gone. */
@@ -17,8 +19,8 @@ const NOTICE_MS = 6000;
 
 /**
  * Everything a list of FeedItems needs to behave like the Feed: like (with per-post errors), Want to
- * Try, Rank, the comments sheet's open post, and the "post is gone" notice. Shared by the Feed and
- * Profile › Activity so they agree. `linkActors: false` drops the avatar link (on that person's own profile).
+ * Try, Rank, the comments sheet's open post, and the "post is gone" notice. Shared by the Feed,
+ * Profile › Activity and the Post screen so they agree. `linkActors: false` drops the avatar link (on that person's own profile).
  */
 export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean } = {}) {
   const router = useRouter();
@@ -45,6 +47,10 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
     },
     [toggleLike],
   );
+
+  // The post whose More menu is open (Report post, Block account); the screen renders its SafetyFlow.
+  const safety = useSafetyTarget();
+  const { open: openSafety } = safety;
 
   // The post whose comments are open, and the notice when one turned out to be gone.
   const [commentsFor, setCommentsFor] = useState<string | null>(null);
@@ -85,6 +91,8 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
           likeError={likeErrors[item.id] ?? null}
           onComment={() => openComments(item.id)}
           onOpenBev={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
+          onMore={() => openSafety({ kind: 'post', id: item.id, author: item.actor })}
+          onOpenPlace={openPlace(router, item.venue, you ? 'mine' : 'friends')}
           onOpenActor={
             linkActors
               ? () => (you ? router.push('/profile') : router.push({ pathname: '/user/[id]', params: { id: item.actor.id } }))
@@ -93,8 +101,17 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
         />
       );
     },
-    [add, remove, like, likeErrors, openComments, router, meId, canSeeAlcohol, linkActors],
+    [add, remove, like, likeErrors, openComments, router, meId, canSeeAlcohol, linkActors, openSafety],
   );
 
-  return { renderItem, commentsFor, closeComments, postGone, notice };
+  return {
+    renderItem,
+    commentsFor,
+    // For a screen that opens a post's comments itself (the Post screen's `?comments=1`).
+    openComments,
+    closeComments,
+    postGone,
+    notice,
+    safety: { target: safety.target, onClose: safety.close },
+  };
 }

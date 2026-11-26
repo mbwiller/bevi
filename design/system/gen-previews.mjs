@@ -173,6 +173,13 @@ h('div', { className: 'pv', style: { alignItems: 'flex-start', gap: 40 } },
   L('uploading', h(B.AvatarPicker, { name: ME.name, src: PHOTO, busy: true, onRemove: function () {} })),
   L('failed', h(B.AvatarPicker, { name: ME.name, error: "Couldn't upload your photo. Try another one." })))`];
 
+P.PhotoCropper = [{ group: 'People', height: 700, width: 393, subtitle: 'After picking a profile photo. Drag it; the wheel zooms' }, `.pv-frame { height: 680px; margin: 10px auto; }`, `
+(function () {
+  // A stand-in landscape photo, 1600 x 1200, with something off-centre to frame.
+  var WIDE = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2B263"/><stop offset="1" stop-color="#8E44AD"/></linearGradient></defs><rect width="160" height="120" fill="url(#g)"/><circle cx="62" cy="50" r="20" fill="#FFF4E0"/><ellipse cx="62" cy="108" rx="34" ry="26" fill="#FFF4E0"/><circle cx="128" cy="30" r="9" fill="#FFF4E0" opacity=".5"/></svg>');
+  return h('div', { className: 'pv-frame' }, h(B.PhotoCropper, { src: WIDE, width: 1600, height: 1200, onDone: function () {}, onCancel: function () {} }));
+})()`];
+
 P.AvatarStack = [{ group: 'People', height: 96 }, '', `
 h('div', { className: 'pv', style: { gap: 40 } },
   L('Friends who have had it', h(B.AvatarStack, { people: FRIENDS })),
@@ -186,6 +193,16 @@ h('div', { className: 'pv-narrow' },
   h(B.UserRow, { user: FRIENDS[3], meta: '52 Bevs', context: 'Followed by Sam and Arjun', following: false }),
   h(B.UserRow, { user: FRIENDS[0], rank: 1, meta: '212 pts', streak: 14 }),
   h(B.UserRow, { user: ME, rank: 12, meta: '96 pts', streak: 4, self: true, divider: false }))`];
+
+P.NotificationRow = [{ group: 'People', height: 560, width: 393, subtitle: 'Tap Follow back' }, '', `
+h('div', { className: 'pv-narrow' },
+  h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[1], FRIENDS[2]], actorCount: 5, bev: BEVS.dietCoke, time: '2m', unread: true }),
+  h(B.NotificationRow, { kind: 'comment', actors: [FRIENDS[3]], bev: BEVS.topo, comment: 'This is the correct ranking. Finally someone said it.', time: '14m', unread: true }),
+  h(function Row() { var st = React.useState(false); return h(B.NotificationRow, { kind: 'follow', actors: [FRIENDS[5]], time: '1h', unread: true, following: st[0], onFollow: function () { st[1](!st[0]); } }); }),
+  h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[0]], bev: BEVS.coldBrew, time: '4d' }),
+  h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[3], ARJUN], bev: BEVS.poppi, time: '6d' }),
+  h(B.NotificationRow, { kind: 'comment', actors: [FRIENDS[2]], bev: BEVS.matcha, comment: '8.4 is generous.', time: '2w' }),
+  h(B.NotificationRow, { kind: 'follow', actors: [ARJUN], time: '3w', following: true, divider: false }))`];
 
 P.StatCard = [{ group: 'People', height: 130, width: 393 }, `.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px 10px; }`, `
 h('div', { className: 'two' },
@@ -240,7 +257,7 @@ h('div', { className: 'pv', style: { gap: 12 } },
   L('settings', h(B.IconButton, { icon: 'settings', label: 'Settings' })),
   L('share', h(B.IconButton, { icon: 'share', label: 'Share' })),
   L('filled close', h(B.IconButton, { icon: 'x', label: 'Close', variant: 'filled' })),
-  L('with badge', h(B.IconButton, { icon: 'menu', label: 'Menu', badge: 4 })))`];
+  L('with badge', h(B.IconButton, { icon: 'bell', label: 'Notifications, 4 unread', badge: 4 })))`];
 
 P.LikeButton = [{ group: 'Actions', height: 110, subtitle: 'Tap to like' }, '', `
 h(function Demo() {
@@ -272,6 +289,12 @@ P.SortToggle = [{ group: 'Actions', height: 80, width: 393 }, '', `
 h('div', { className: 'pv-narrow', style: { paddingTop: 16 } }, h(B.SortToggle, { label: 'Score', onClick: function () {}, onSearch: function () {} }), h(B.SortToggle, { label: 'Recent', onClick: function () {} }))`];
 
 // ---------- Inputs ----------
+P.Switch = [{ group: 'Actions', height: 110, subtitle: 'Tap to switch' }, '', `
+h('div', { className: 'pv', style: { gap: 28 } },
+  L('on', h(function S() { var st = React.useState(true); return h(B.Switch, { checked: st[0], onChange: st[1], label: 'Likes' }); })),
+  L('off', h(function S() { var st = React.useState(false); return h(B.Switch, { checked: st[0], onChange: st[1], label: 'Posts' }); })),
+  L('disabled', h(B.Switch, { checked: false, disabled: true, label: 'Comments' })))`];
+
 P.SearchBar = [{ group: 'Inputs', height: 150, width: 393 }, '', `
 h('div', { className: 'pv-col' },
   h(B.SearchBar, { placeholder: 'Search a Bev or a person', id: 'feed-search' }),
@@ -289,10 +312,48 @@ h('div', { className: 'pv-col', style: { gap: 18 } },
 P.PriceTierPicker = [{ group: 'Inputs', height: 140, width: 393 }, '', `
 h('div', { className: 'pv-col' }, h(B.PriceTierPicker, { value: 2 }))`];
 
+// The go-tos grid: three columns on the 16pt gutter, 12pt apart. The art is each category's most-rated starter
+// Bev; Smoothie has none here, so it shows the category's own art (a default iced cup).
+P.PickTile = [{ group: 'Inputs', height: 1160, width: 393, subtitle: 'Tap up to three, favorite first' }, `.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0 16px; }
+.cell { display: flex; flex-direction: column; gap: 6px; } .cell .bv-pick { flex: 1; }
+.cap { margin: 0; padding: 18px 16px 10px; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }
+.help { margin: 0; padding: 14px 16px 20px; font-size: 15px; line-height: 20px; color: var(--textSecondary); }`, `
+h(function Demo() {
+  var ART = {
+    soda: BEVS.mexicanCoke.art, diet_soda: BEVS.dietCoke.art, juice: BEVS.oj.art, water: { kind: 'waterBottle', color: '#cfe8f3', accent: '#2b7bb9' },
+    sparkling_water: BEVS.topo.art, energy: BEVS.redBull.art, coffee: BEVS.coldBrew.art, tea: BEVS.matcha.art, boba: BEVS.brownSugar.art,
+    sports: BEVS.gatorade.art, smoothie: { kind: 'icedCup' }, beer: { kind: 'pint', color: '#e3a017', accent: '#f4efe6' },
+    wine: { kind: 'wine', color: '#7b1e3a', accent: '#7b1e3a' }, spirits_cocktails: { kind: 'bottle', color: '#c9a227', accent: '#1d1d1f' },
+  };
+  var cats = B.categories.filter(function (c) { return c.id !== 'other'; });
+  var st = React.useState(['coffee', 'boba']), picks = st[0], set = st[1];
+  var tap = function (id) {
+    set(picks.indexOf(id) >= 0 ? picks.filter(function (p) { return p !== id; }) : picks.length >= 3 ? picks : picks.concat([id]));
+  };
+  var left = 3 - picks.length;
+  var help = picks.length === 0 ? 'Tap your number 1 first.' : left === 0 ? "That's your 3. Tap one to swap it out." : left === 1 ? 'Pick 1 more, or continue.' : 'Pick up to ' + left + ' more, or continue.';
+  function cell(text, el) { return h('div', { className: 'cell' }, el, h('span', { className: 'pv-label' }, text)); }
+  return h('div', null,
+    h('p', { className: 'cap' }, 'Every state'),
+    h('div', { className: 'grid' },
+      cell('not picked', h(B.PickTile, { label: 'Coffee', art: ART.coffee })),
+      cell('picked 1', h(B.PickTile, { label: 'Boba', art: ART.boba, rank: 1 })),
+      cell('picked 2', h(B.PickTile, { label: 'Sparkling water', art: ART.sparkling_water, rank: 2 })),
+      cell('picked 3', h(B.PickTile, { label: 'Tea', art: ART.tea, rank: 3 })),
+      cell('dimmed: three are picked', h(B.PickTile, { label: 'Spirits & cocktails', art: ART.spirits_cocktails, disabled: true })),
+      cell('no starter Bev: the category art', h(B.PickTile, { label: 'Smoothie', art: ART.smoothie }))),
+    h('p', { className: 'cap' }, 'The grid, two picked: tap to pick, tap again to drop'),
+    h('div', { className: 'grid' }, cats.map(function (c) {
+      var i = picks.indexOf(c.id);
+      return h(B.PickTile, { key: c.id, label: c.label, art: ART[c.id], rank: i >= 0 ? i + 1 : undefined, disabled: i < 0 && picks.length >= 3, onClick: function () { tap(c.id); } });
+    })),
+    h('p', { className: 'help', 'aria-live': 'polite' }, help));
+})`];
+
 // ---------- Navigation ----------
 P.Header = [{ group: 'Navigation', height: 300, width: 393 }, `.hd { border-bottom: 1px solid var(--border); }`, `
 h('div', { className: 'pv-narrow' },
-  h('div', { className: 'hd' }, h(B.Header, { wordmark: true, actions: [{ icon: 'user-plus', label: 'Find people' }] })),
+  h('div', { className: 'hd' }, h(B.Header, { wordmark: true, actions: [{ icon: 'bell', label: 'Notifications, 3 unread', badge: 3 }, { icon: 'user-plus', label: 'Find people' }] })),
   h('div', { className: 'hd' }, h(B.Header, { title: 'Matt Willer', actions: [{ icon: 'menu', label: 'Settings' }] })),
   h('div', { className: 'hd' }, h(B.Header, { centered: true, title: 'Lists' })),
   h('div', { className: 'hd' }, h(B.Header, { title: 'Add a Bev' })),
@@ -318,7 +379,7 @@ h('div', { className: 'pv-narrow', style: { display: 'flex', flexDirection: 'col
   h(B.TabBar, { active: 'profile', user: ME }))`];
 
 // ---------- Feed ----------
-P.FeedPost = [{ group: 'Feed', height: 1640, width: 393, subtitle: 'Double-tap a post to like it' }, '.pv-mat { margin: 0; padding: 20px 16px 0; }', `
+P.FeedPost = [{ group: 'Feed', height: 2000, width: 393, subtitle: 'Double-tap a post to like it' }, '.pv-mat { margin: 0; padding: 20px 16px 0; }', `
 h(function Demo() {
   var a = React.useState(false), aOn = a[0], setA = a[1];
   var b = React.useState(true), bOn = b[0], setB = b[1];
@@ -344,7 +405,10 @@ h(function Demo() {
       photos: [{ art: BEVS.coldBrew.art }, { art: BEVS.matcha.art }, { art: BEVS.horchata.art }] }, ACTIONS)),
     h('p', { className: 'pv-label pv-mat' }, "Explore: the plain post (no heart, counts or comments) with the author's Follow pill"),
     h(B.FeedPost, { actor: FRIENDS[2], bev: BEVS.matcha, score: 8.2, time: '2 days ago', note: 'oat milk, half sweet. the only one I order now',
-      following: cOn, onFollow: function () { setC(!cOn); } }));
+      following: cOn, onFollow: function () { setC(!cOn); } }),
+    h('p', { className: 'pv-label pv-mat' }, "More actions: onMore adds an ellipsis after the score on other people's posts"),
+    h(B.FeedPost, Object.assign({ actor: FRIENDS[0], bev: BEVS.brownSugar, score: 7.8, time: 'Wednesday', likeCount: 11, note: 'too sweet for me, but the boba is perfect',
+      onMore: NOOP, moreLabel: 'More actions, post by @' + FRIENDS[0].handle }, ACTIONS)));
 })`];
 
 // ---------- Ranking ----------
@@ -382,7 +446,7 @@ h(B.ErrorState, { icon: 'wifi-off', title: "You're offline", message: "We'll sho
 P.Skeleton = [{ group: 'Feedback', height: 330, width: 393 }, '', `
 h('div', { className: 'pv-narrow' }, h(B.Skeleton, { variant: 'row' }), h(B.Skeleton, { variant: 'post' }))`];
 
-P.CommentsSheet = [{ group: 'Feed', height: 1470, width: 393, subtitle: 'Your own comments can be deleted' }, `.pv-frame { height: 440px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
+P.CommentsSheet = [{ group: 'Feed', height: 2830, width: 393, subtitle: 'Opens at 60%, expands to the whole screen. Your own comments can be deleted' }, `.pv-frame { height: 640px; margin: 10px auto; } .cap { margin: 14px 16px 0; font-size: 12px; line-height: 16px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--textSecondary); }`, `
 h(function Demo() {
   var few = [
     { id: 'a', author: FRIENDS[1], body: 'ok this is going on my list', time: '4 hours ago' },
@@ -402,8 +466,10 @@ h(function Demo() {
     h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME })),
     h('p', { className: 'cap' }, 'A few, one of them yours'),
     h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME, comments: few })),
+    h('p', { className: 'cap' }, "More actions on other people's comments (onMore), Delete on yours"),
+    h('div', { className: 'pv-frame' }, h(B.CommentsSheet, { me: ME, comments: few, onMore: function () {} })),
     h('p', { className: 'cap' }, 'A long thread, posting failed'),
-    h('div', { className: 'pv-frame', style: { height: 500 } }, h(B.CommentsSheet, { me: ME, comments: long, error: "Couldn't post your comment. Check your connection and try again." })));
+    h('div', { className: 'pv-frame', style: { height: 760 } }, h(B.CommentsSheet, { me: ME, comments: long, error: "Couldn't post your comment. Check your connection and try again." })));
 })`];
 
 P.Sheet = [{ group: 'Feedback', height: 460, width: 393 }, `.pv-frame { height: 440px; margin: 10px auto; } .opt { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; min-height: 48px; border-bottom: 1px solid var(--border); font-size: 17px; }`, `
@@ -489,6 +555,8 @@ P.VenueSheet = [{ group: 'Map', height: 1480, width: 393, subtitle: 'Docked unde
 })()`];
 
 // ---------- Screens (showcase pages) ----------
+const NOTIF_ROWS = "\n    h(B.SectionHeader, { title: 'New' }),\n    h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[1], FRIENDS[2]], actorCount: 5, bev: BEVS.dietCoke, time: '2m', unread: true }),\n    h(B.NotificationRow, { kind: 'comment', actors: [FRIENDS[3]], bev: BEVS.topo, comment: 'This is the correct ranking. Finally someone said it.', time: '14m', unread: true }),\n    h(function Row() { var st = React.useState(false); return h(B.NotificationRow, { kind: 'follow', actors: [FRIENDS[5]], time: '1h', unread: true, following: st[0], onFollow: function () { st[1](!st[0]); } }); }),\n    h(B.SectionHeader, { title: 'This week' }),\n    h(B.NotificationRow, { kind: 'comment', actors: [FRIENDS[2]], bev: BEVS.matcha, comment: '8.4 is generous.', time: '2d' }),\n    h(B.NotificationRow, { kind: 'follow', actors: [ARJUN], time: '3d', following: true }),\n    h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[0]], bev: BEVS.coldBrew, time: '4d' }),\n    h(B.SectionHeader, { title: 'Earlier' }),\n    h(B.NotificationRow, { kind: 'like', actors: [FRIENDS[3], ARJUN], actorCount: 7, bev: BEVS.poppi, time: '2w' }),\n    h(B.NotificationRow, { kind: 'follow', actors: [FRIENDS[1]], time: '3w', following: true })";
+
 const PHONE_CSS = `
   p, h1, h2 { margin: 0; }
   .phone { position: relative; width: 393px; height: 852px; overflow: hidden; display: flex; flex-direction: column; background: var(--surface); }
@@ -510,7 +578,7 @@ h('div', { className: 'phone' },
 
 P.ScreenFeed = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS, phone('feed', `
   h(F, null,
-    h(B.Header, { wordmark: true, actions: [{ icon: 'user-plus', label: 'Find people' }] }),
+    h(B.Header, { wordmark: true, actions: [{ icon: 'bell', label: 'Notifications, 3 unread', badge: 3 }, { icon: 'user-plus', label: 'Find people' }] }),
     h('div', { className: 'gutter', style: { padding: '4px 16px 8px' } }, h(B.SearchBar, { placeholder: 'Search a Bev or a person', id: 'feed-q' })),
     h('div', { className: 'bv-bevof-pair' },
       h(B.BevOfCard, { period: 'day', bev: BEVS.horchata, score: 8.9 }),
@@ -695,6 +763,89 @@ P.ScreenPeople = [{ group: 'Screens', height: 852, width: 393, isPage: true }, P
     h(B.UserRow, { user: FRIENDS[1], rank: 3, meta: '140 pts · 44 Bevs', streak: 2, following: true }),
     h(B.UserRow, { user: ME, rank: 4, meta: '96 pts · 42 Bevs', streak: 4, self: true }),
     h(B.UserRow, { user: FRIENDS[2], rank: 5, meta: '71 pts · 30 Bevs', following: true }))`)];
+
+// Notifications: pushed from the Feed header's bell. Unread on the left, nothing yet on the right.
+P.ScreenNotifications = [{ group: 'Screens', height: 852, width: 802, isPage: true }, PHONE_CSS + `
+  .nt-pair { display: flex; gap: 16px; align-items: flex-start; }
+  .nt-empty { padding-top: 150px; }`, `
+h('div', { className: 'nt-pair' },
+  ${phone('feed', `
+  h(F, null,
+    h(B.Header, { title: 'Notifications', onBack: function () {}, actions: [{ icon: 'settings', label: 'Notification settings' }] }),${NOTIF_ROWS})`)},
+  ${phone('feed', `
+  h(F, null,
+    h(B.Header, { title: 'Notifications', onBack: function () {} }),
+    h('div', { className: 'nt-empty' }, h(B.EmptyState, { icon: 'bell', title: 'No notifications yet', body: "When someone follows you, likes a Bev you posted or comments on it, you'll see it here.", action: 'Find people' })))`)})`];
+
+// Settings > Notifications and its people list. The switches work, by the rules in the README.
+P.ScreenNotificationSettings = [{ group: 'Screens', height: 852, width: 802, isPage: true }, PHONE_CSS + `
+  .ns-pair { display: flex; gap: 16px; align-items: flex-start; }
+  .ns-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+  .ns-label { font-size: 17px; line-height: 22px; }
+  .ns-sub { display: block; font-size: 13px; line-height: 18px; color: var(--textSecondary); }
+  .ns-val { display: flex; align-items: center; gap: 4px; font-size: 15px; color: var(--textSecondary); }
+  .ns-note { padding: 12px 16px 0; font-size: 13px; line-height: 18px; color: var(--textSecondary); }
+  .ns-person { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+  .ns-person b { flex: 1; font-size: 17px; line-height: 22px; font-weight: 600; }
+  .ns-q { padding: 4px 16px 4px; }`, `
+h(function Demo() {
+  var st = React.useState({ paused: false, follows: true, likes: true, comments: true, posts: false });
+  var pk = React.useState({});
+  var s = st[0], picks = pk[0];
+  function set(key, on) {
+    var n = Object.assign({}, s);
+    if (key === 'paused') n.paused = on;
+    else if (on && s.paused) { n = { paused: false, follows: false, likes: false, comments: false, posts: false }; n[key] = true; }
+    else n[key] = on;
+    st[1](n);
+  }
+  function pick(handle, on) { var n = Object.assign({}, picks); n[handle] = on; pk[1](n); if (on) set('posts', true); }
+  var count = FRIENDS.filter(function (f) { return picks[f.handle]; }).length;
+  var row = function (key, label, sub) {
+    return h('div', { className: 'ns-row', key: key },
+      h('span', { className: 'ns-label' }, label, sub ? h('span', { className: 'ns-sub' }, sub) : null),
+      h(B.Switch, { checked: key === 'paused' ? s.paused : !s.paused && s[key], onChange: function (on) { set(key, on); }, label: label }));
+  };
+  return h('div', { className: 'ns-pair' },
+    ${phone(null, `
+    h(F, null,
+      h(B.Header, { title: 'Notifications', onBack: function () {} }),
+      row('paused', 'Pause all', s.paused ? 'Nothing is sent to this phone' : 'Switches every kind off for now'),
+      h(B.SectionHeader, { title: 'Tell me about' }),
+      row('follows', 'New followers'),
+      row('likes', 'Likes', 'On Bevs you posted'),
+      row('comments', 'Comments', 'On Bevs you posted'),
+      row('posts', 'Posts', 'When people you choose post a Bev'),
+      h('div', { className: 'ns-row' }, h('span', { className: 'ns-label' }, 'Choose people'),
+        h('span', { className: 'ns-val' }, count === 0 ? 'No one yet' : count === 1 ? '1 person' : count + ' people', h(B.Icon, { name: 'chevron-right', size: 20, strokeWidth: 2 }))),
+      h('p', { className: 'ns-note' }, 'Follows, likes and comments still show up in the app, whatever you switch off here.'))`)},
+    ${phone(null, `
+    h(F, null,
+      h(B.Header, { title: 'Post notifications', onBack: function () {} }),
+      h('div', { className: 'ns-q' }, h(B.SearchBar, { placeholder: 'Search people you follow', id: 'pn-q' })),
+      h('p', { className: 'ns-note' }, "You'll hear when the people you switch on post a Bev. The likes and comments they get are never sent."),
+      h(B.SectionHeader, { title: 'People you follow' }),
+      FRIENDS.map(function (f) {
+        return h('div', { className: 'ns-person', key: f.handle }, h(B.Avatar, { name: f.name, size: 44 }), h('b', null, f.handle),
+          h(B.Switch, { checked: !!picks[f.handle], onChange: function (on) { pick(f.handle, on); }, label: 'Post notifications for ' + f.handle }));
+      }))`)});
+})`];
+
+// The ask before the iOS prompt: a Sheet over Notifications, shown once.
+P.ScreenNotificationsAsk = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
+  .ask { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 4px 24px 0; text-align: center; }
+  .ask .bv-empty-icon { background: var(--primaryTint); color: var(--primary); }
+  .ask-actions { display: flex; flex-direction: column; gap: 4px; width: 100%; margin-top: 12px; }`, phone('feed', `
+  h(F, null,
+    h(B.Header, { title: 'Notifications', onBack: function () {} }),${NOTIF_ROWS},
+    h(B.Sheet, { snap: 46 },
+      h('div', { className: 'ask' },
+        h('span', { className: 'bv-empty-icon' }, h(B.Icon, { name: 'bell', size: 28, strokeWidth: 1.75 })),
+        h('p', { className: 'screenTitle' }, 'Hear about it when it happens'),
+        h('p', { className: 'body bv-meta' }, 'Bevi can tell you when someone follows you, likes a Bev you posted or comments on it. You choose which in Settings.'),
+        h('div', { className: 'ask-actions' },
+          h(B.Button, { variant: 'primary', block: true }, 'Turn on notifications'),
+          h(B.Button, { variant: 'ghost', block: true }, 'Not now')))))`)];
 
 // Add Bev (the centre tab): the bar, Snap it, then the fastest routes to ranking something. No map.
 const ADD_CSS = PHONE_CSS + `

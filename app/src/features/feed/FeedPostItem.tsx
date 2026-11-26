@@ -2,6 +2,7 @@ import type { FeedItem, Profile } from '@bevi/shared';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Announce } from '@/components/Announce';
 import { FeedPost, POST_AVATAR } from '@/components/FeedPost';
 import { usePressFeedback, type PressFeedback } from '@/components/PressFeedback';
 import { spacing, type, useTheme } from '@/theme';
@@ -22,6 +23,10 @@ export interface FeedPostItemProps {
   onOpenBev: () => void;
   /** Omitted on the actor's own profile, where the avatar has nowhere to go. */
   onOpenActor?: () => void;
+  /** Opens the post's More menu (Report post, Block account). Omitted on the viewer's own post. */
+  onMore?: () => void;
+  /** Opens where the Bev was had (the Map tab). The place line shows without it, as text. */
+  onOpenPlace?: () => void;
 }
 
 /**
@@ -39,6 +44,8 @@ export const FeedPostItem = memo(function FeedPostItem({
   onComment,
   onOpenBev,
   onOpenActor,
+  onMore,
+  onOpenPlace,
 }: FeedPostItemProps) {
   const { colors } = useTheme();
   // The actor link is transparent: while it is held, the avatar under it gives way (Press).
@@ -53,6 +60,8 @@ export const FeedPostItem = memo(function FeedPostItem({
         bucket={item.bucket}
         note={item.note}
         time={item.createdAt}
+        place={item.venue?.name}
+        onPlace={onOpenPlace}
         saved={item.inMyWantToTry}
         liked={item.likedByMe}
         likeCount={item.likeCount}
@@ -65,9 +74,12 @@ export const FeedPostItem = memo(function FeedPostItem({
         onRank={onRank}
         onSave={onSave}
         onOpen={onOpenBev}
+        onMore={you ? undefined : onMore}
+        moreLabel={`More actions, post by @${item.actor.handle}`}
         avatarPressStyle={onOpenActor ? actorPress.style : undefined}
         divider={false}
       />
+      <Announce text={likeError} />
       {likeError ? (
         <Text style={[type.body, styles.error, { color: colors.scoreLow }]} accessibilityLiveRegion="polite" role="alert">
           {likeError}

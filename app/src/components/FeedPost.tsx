@@ -21,7 +21,9 @@ import type { BevArtProps } from './BevArt';
 import { BevActions, bevImageProps } from './BevParts';
 import { BevImage } from './BevImage';
 import { CommentButton } from './CommentButton';
+import { HitTarget, PRESSED } from './HitTarget';
 import { Icon } from './Icon';
+import { IconButton } from './IconButton';
 import { LikeButton } from './LikeButton';
 import { FeedbackPressable, type PressFeedback } from './PressFeedback';
 import { ScoreBubble } from './ScoreBubble';
@@ -41,6 +43,13 @@ export interface FeedPostProps {
   note?: string | null;
   /** ISO timestamp, printed on the meta line as "5 hours ago" or a weekday. */
   time?: string;
+  /**
+   * Where the actor had it: the venue's name, on its own line under the meta line with a map pin
+   * (BEV-22). Nothing renders when absent or empty.
+   */
+  place?: string | null;
+  /** Opens that place (the Map tab). Without it the place line is text, not a control. */
+  onPlace?: () => void;
   saved?: boolean;
   /** The viewer liked this post: the heart is filled `primary`. */
   liked?: boolean;
@@ -84,6 +93,13 @@ export interface FeedPostProps {
   onSave?: () => void;
   onOpen?: () => void;
   /**
+   * Opens the post's More menu (Report post, Block account): an ellipsis after the score bubble.
+   * Omitted on the viewer's own post, which has nothing to report.
+   */
+  onMore?: () => void;
+  /** The More button's accessible name; say whose post it is ("More actions, post by @friend_a"). */
+  moreLabel?: string;
+  /**
    * The press feedback of a target laid over the avatar from outside (FeedPostItem's actor link):
    * the avatar gives way while that target is held.
    */
@@ -114,6 +130,9 @@ const NOTE_SIDE = { max: 84, cut: 72 };
 
 /** The meta line's gap under the sentence and the note column's top and bottom inset, in pt (no spacing token is 2). */
 const HAIRLINE_OFFSET = 2;
+
+/** The place line's height, `type.body`'s line: what its 44pt hit area is centred on. */
+const PLACE_LINE = 20;
 
 /** "Bev'd it too": the AvatarStack and the names stop at two. */
 const ALSO_NAMED = 2;
@@ -184,6 +203,8 @@ export function FeedPost({
   bucket,
   note,
   time,
+  place,
+  onPlace,
   saved = false,
   liked = false,
   likeCount = 0,
@@ -199,6 +220,8 @@ export function FeedPost({
   onRank,
   onSave,
   onOpen,
+  onMore,
+  moreLabel = 'More actions',
   avatarPressStyle,
   divider = true,
   style,
@@ -308,8 +331,25 @@ export function FeedPost({
               ) : null}
             </View>
           </View>
+          {place ? (
+            <Pressable
+              testID="post-place"
+              accessibilityRole={onPlace ? 'button' : 'text'}
+              accessibilityLabel={onPlace ? `At ${place}. Show on the map` : `At ${place}`}
+              disabled={!onPlace}
+              onPress={onPlace}
+              style={({ pressed }) => [styles.meta, styles.place, pressed && PRESSED]}
+            >
+              {onPlace ? <HitTarget height={PLACE_LINE} /> : null}
+              <Icon name="map-pin" size={16} strokeWidth={2} color={colors.textSecondary} />
+              <Text style={[type.body, styles.shrink, secondary]} numberOfLines={1}>
+                {place}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
         {score != null || scoreVariant ? <ScoreBubble score={score} variant={scoreVariant} bucket={bucket ?? undefined} /> : null}
+        {onMore ? <IconButton icon="ellipsis" label={moreLabel} onPress={onMore} style={styles.more} /> : null}
       </View>
 
       {media === 'picture' ? (
@@ -486,6 +526,8 @@ const styles = StyleSheet.create({
   divider: { borderBottomWidth: 1 },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   headText: { flex: 1, minWidth: 0 },
+  // The 44pt button hangs into the gutter so its glyph lines up with the edge, as the header's actions do.
+  more: { marginRight: -spacing.sm, marginLeft: -spacing.xs },
   // The sentence: the verb regular, the names bold.
   regular: { fontWeight: '400' },
   bold: { fontWeight: '700' },
@@ -494,6 +536,8 @@ const styles = StyleSheet.create({
   metaText: { flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0 },
   shrink: { flexShrink: 1, minWidth: 0 },
   keep: { flexShrink: 0 },
+  // The place line hugs its text, so the tap target is the pin and the name, not the row's width.
+  place: { alignSelf: 'flex-start', maxWidth: '100%' },
   // `overflow-wrap: anywhere` so a long unbroken word wraps instead of widening the post.
   wrap: Platform.OS === 'web' ? ({ overflowWrap: 'anywhere' } as TextStyle) : {},
   // The picture, and beside it a column with the note over the Bevi score line.

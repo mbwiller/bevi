@@ -23,9 +23,14 @@ export const STARTER_COPY = {
   saveFailed: "That didn't save",
 } as const;
 
-/** "We'll show you 10 popular Bevs…", with the size of the actual selection. */
-export function introBody(count: number): string {
-  return `We'll show you ${count} popular ${count === 1 ? 'Bev' : 'Bevs'}. Rank the ones you've tried and skip the rest. It's how Bevi learns your taste.`;
+/**
+ * "We'll show you 10 Bevs, your go-tos first…" (the set leads with the user's go-to
+ * categories), or "We'll show you 10 popular Bevs…" with none, with the size of the actual selection.
+ */
+export function introBody(count: number, withGoTos = false): string {
+  const bevs = count === 1 ? 'Bev' : 'Bevs';
+  const lead = withGoTos ? `We'll show you ${count} ${bevs}, your go-tos first.` : `We'll show you ${count} popular ${bevs}.`;
+  return `${lead} Rank the ones you've tried and skip the rest. It's how Bevi learns your taste.`;
 }
 
 /** "Rank at least 3 so we can learn your taste", then how many are left. */

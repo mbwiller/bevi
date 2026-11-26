@@ -10,5 +10,8 @@ export * from './lists';
 export * from './feed';
 export * from './comments';
 export * from './venues';
+export * from './places';
 export * from './bugs';
+export * from './safety';
+export * from './notifications';
 export { flattenPages } from './util';

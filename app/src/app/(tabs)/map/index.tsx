@@ -1,5 +1,4 @@
-// The Map tab. The map of where you and your friends Bev'd is being built (the 2026-11-16 decision);
-// until it exists the tab says so.
-import { MapInProgressScreen } from '@/features/map/MapInProgressScreen';
+// The Map tab: where you and the people you follow had your Bevs (BEV-22, the 2026-11-16 decision).
+import { BevdMapScreen } from '@/features/places/BevdMapScreen';
 
-export default MapInProgressScreen;
+export default BevdMapScreen;

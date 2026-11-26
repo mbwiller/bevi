@@ -8,7 +8,7 @@ import {
 } from '@bevi/shared';
 import { requireUserId } from './currentUser';
 import { mapError } from './errors';
-import { uploadByteLength } from './uploads';
+import { toUploadBody, uploadByteLength } from './uploads';
 
 // The internal bug reporter's client half (docs/bug-workflow.md).
 //
@@ -23,7 +23,8 @@ import { uploadByteLength } from './uploads';
 //      (the tracker), and answers with the identifier the board assigned.
 // `listMine()`, `markVerified()` and `place()` are the function's other routes
 // (`bug-report/status`, `bug-report/verify`, `bug-report/place`), gated the
-// same way server-side.
+// same way server-side. `place()` is gated once more: only an account
+// `can_rank_bugs()` admits (a founder) may rank, which `canRank()` asks.
 //
 // The tracker credential lives in the function's environment. Nothing in this
 // file, and nothing the app bundles, can reach it. The evidence objects are
@@ -95,6 +96,9 @@ interface FunctionErrorBody {
   route?: string;
   /** The place route's `not_open`: the ticket is the caller's, but no longer open. */
   reason?: string;
+  // The verify route answers 409 `not_in_review` for a ticket that is not in
+  // review, and the place route 403 `not_allowed` (with `route: 'place'`) for
+  // an account that may not rank.
 }
 
 interface FunctionErrorResponse {
@@ -178,6 +182,14 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       return data === true;
     },
 
+    async canRank(): Promise<boolean> {
+      const { data, error } = await client.rpc('can_rank_bugs');
+      // As canReport: it only decides whether Place is shown, so a signed-out
+      // caller, a tester, or a database without the function is simply false.
+      if (error) return false;
+      return data === true;
+    },
+
     async report(input: BugReportInput): Promise<BugReportResult> {
       const uid = await requireUserId(client);
 
@@ -199,38 +211,36 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       if (evidence.length > MAX_EVIDENCE) {
         throw new ApiError('validation', `Attach at most ${MAX_EVIDENCE} screenshots`, { field: 'evidence' });
       }
-      const planned: { file: Blob; mimeType: string; ext: string; caption: string }[] = [];
+      const planned: { body: Blob | ArrayBuffer; mimeType: string; ext: string; caption: string }[] = [];
       for (const item of evidence) {
         const ext = EXT_BY_MIME_TYPE[item.mimeType];
         if (!ext) throw new ApiError('validation', 'Attach a JPEG, PNG or WebP image', { field: 'evidence' });
         // `uploadByteLength` reads `.size` or `.byteLength`, whichever the
-        // payload has, and 0 when it has neither -- same tolerance as the
-        // `typeof ... === 'number'` guard it replaces, now that media uploads
-        // may be raw bytes (uploads.ts).
+        // payload has, and 0 when it has neither (uploads.ts).
         if (uploadByteLength(item.file) > MAX_EVIDENCE_BYTES) {
           throw new ApiError('validation', 'That screenshot is too large', { field: 'evidence' });
         }
-        planned.push({ file: item.file, mimeType: item.mimeType, ext, caption: typeof item.caption === 'string' ? item.caption : '' });
+        // Normalised here, with the rest of the checks, so a React Native `Blob`
+        // (which would store 0 bytes with no error) is refused before the first
+        // object is staged, like a bad third file is.
+        let body: Blob | ArrayBuffer;
+        try {
+          body = toUploadBody(item.file);
+        } catch (e) {
+          // `toUploadBody` names the field `media.upload` takes, 'file'. Here
+          // the contract's field for every attachment error is 'evidence'.
+          if (e instanceof ApiError && e.code === 'validation') throw new ApiError('validation', e.message, { field: 'evidence' });
+          throw e;
+        }
+        planned.push({ body, mimeType: item.mimeType, ext, caption: typeof item.caption === 'string' ? item.caption : '' });
       }
 
       const evidencePaths: string[] = [];
       for (const item of planned) {
         const path = `${uid}/${randomId()}.${item.ext}`;
-        // WEB-ONLY until the bug reporter is ported to native (IM-10).
-        //
-        // Unlike `media.upload`, this hands the payload to Storage with no
-        // `toUploadBody()`, and `BugReportInput.evidence[].file` is still
-        // typed `Blob` -- so a React Native Blob would store 0 bytes here with
-        // no error, exactly the trap `media.ts` now refuses. That is safe only
-        // because nothing off the web calls this yet.
-        //
-        // When the reporter is ported: widen the evidence payload to
-        // `UploadPayload` in the contract (its own bump), measure with
-        // `uploadByteLength()` as the check above already does, and pass
-        // `toUploadBody(item.file)` here so the RN guard applies.
         const { error } = await client.storage
           .from(EVIDENCE_BUCKET)
-          .upload(path, item.file, { contentType: item.mimeType });
+          .upload(path, item.body, { contentType: item.mimeType });
         if (error) throw mapError(error);
         evidencePaths.push(path);
       }
@@ -275,7 +285,15 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
       const id = ticketId?.trim() ?? '';
       if (!TICKET_RE.test(id)) throw new ApiError('validation', 'That is not a ticket identifier', { field: 'ticketId' });
       const { data, error } = await client.functions.invoke<{ report?: unknown }>(VERIFY_ROUTE, { body: { ticketId: id } });
-      if (error) throw await mapFunctionError(error);
+      if (error) {
+        const read = await readFunctionError(error);
+        // The ticket is the caller's but the board does not have it in review:
+        // there is nothing to verify yet, or it is already closed.
+        if (read?.status === 409 && read.body?.error === 'not_in_review') {
+          throw new ApiError('conflict', "That report isn't waiting for your check", { reason: 'not_in_review' });
+        }
+        throw await mapFunctionError(error, read);
+      }
       const summary = toSummary(data?.report);
       if (!summary) throw new ApiError('unknown', "The issue tracker didn't confirm the change");
       return summary;
@@ -305,6 +323,10 @@ export function createBugsApi(client: SupabaseClient): BugsApi {
           throw new ApiError('conflict', "That report isn't open any more", { reason: 'not_open' });
         }
         if (read?.status === 404) throw new ApiError('not_found', "That report isn't one of yours", { reason: 'not_found' });
+        // Ranking is a founder's act; a tester may file and confirm, not rank.
+        if (read?.status === 403 && read.body?.error === 'not_allowed') {
+          throw new ApiError('unauthorized', 'This account cannot rank reports', { reason: 'not_allowed' });
+        }
         throw await mapFunctionError(error, read);
       }
       return toSummaries(data?.reports);

@@ -24,6 +24,13 @@ export type CategoryId =
   | 'beer' | 'wine' | 'spirits_cocktails' | 'other';
 
 /**
+ * The most go-to categories a user picks in onboarding (`profile.setCategoryPicks`), mirrored
+ * from the `rank between 1 and 3` check on `user_category_picks` and `set_category_picks`'s own
+ * limit; keep the three in sync by hand, as with `HANDLE_PATTERN`.
+ */
+export const MAX_CATEGORY_PICKS = 3;
+
+/**
  * A Bev's dominant taste family. Deliberately coarser than a category and cuts
  * across them: a cola soda and a cola slushie share `cola`. Mirrored by the
  * `base` check constraint on `bev_flavor_profiles`; keep the two in sync by
@@ -86,3 +93,35 @@ export const HANDLE_PATTERN = /^[a-z0-9_]{3,20}$/;
 
 /** Handles the server rejects even when the pattern matches. */
 export const RESERVED_HANDLES: readonly string[] = ['admin', 'bevi', 'support', 'null'];
+
+/**
+ * What a content report is about (IS-7), mirrored from the check on
+ * `content_reports.content_type`: a feed post (`FeedItem.id` / `ExplorePost.id`),
+ * a comment (`Comment.id`) or a person (`Profile.id`). A Bev in the catalog is
+ * not one of them: that is `bevs.report`.
+ */
+export type ReportContentKind = 'post' | 'comment' | 'profile';
+
+/**
+ * Why something is reported (IS-7), mirrored from the check on
+ * `content_reports.reason` and `report_content`'s own validation; keep the
+ * three in sync by hand, as with `HANDLE_PATTERN`.
+ */
+export type ReportReason =
+  | 'spam' | 'harassment' | 'hate' | 'violence' | 'sexual'
+  | 'self_harm' | 'illegal' | 'misinformation' | 'other';
+
+/** Every `ReportReason`, in the order a report sheet offers them (`other` last). */
+export const REPORT_REASONS: readonly ReportReason[] = [
+  'spam', 'harassment', 'hate', 'violence', 'sexual', 'self_harm', 'illegal', 'misinformation', 'other',
+];
+
+/** The longest `note` a content report takes, in characters after trimming (`content_reports.note`). */
+export const REPORT_NOTE_MAX = 500;
+
+/**
+ * What happened, in one row of the notifications inbox (T-31, contract 3.7.0),
+ * mirrored from the check on `notifications.kind`: someone followed the
+ * caller, liked one of the caller's posts, or commented on one.
+ */
+export type NotificationKind = 'follow' | 'like' | 'comment';

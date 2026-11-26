@@ -16,6 +16,7 @@ import type {
   BevPrediction,
   BevSimilarity,
   BevSummary,
+  BlockedUser,
   Borough,
   Bucket,
   BucketBev,
@@ -31,9 +32,13 @@ import type {
   FriendScore,
   IconStatus,
   LeaderboardRow,
+  Notification,
+  NotificationKind,
+  NotificationSettings,
   NutritionPreview,
   PeriodWinner,
   PhotoStatus,
+  PostNotificationPerson,
   PriceTier,
   Profile,
   ProfileRow,
@@ -43,11 +48,12 @@ import type {
   UserLeaderboardRow,
   Venue,
   VenueDetail,
+  PlaceType,
   VenueKind,
   VenuePin,
   WantToTryItem,
 } from '@bevi/shared';
-import { ApiError } from '@bevi/shared';
+import { ApiError, PLACE_TYPES } from '@bevi/shared';
 
 export function bucketToDb(bucket: Bucket): 1 | 2 | 3 {
   switch (bucket) {
@@ -154,6 +160,137 @@ export function mapEmbeddedProfile(client: SupabaseClient, row: EmbeddedProfileR
     canSeeAlcohol: false,
     onboarded: row.onboarded,
   };
+}
+
+/**
+ * One row of `list_blocked_users` (IS-7, 20261118220000): the profile columns
+ * the social-context functions return, plus when the caller blocked them.
+ */
+export interface BlockedUserRpcRow extends EmbeddedProfileRow {
+  blocked_at: string;
+}
+
+export function mapBlockedUser(client: SupabaseClient, row: BlockedUserRpcRow): BlockedUser {
+  return { ...mapEmbeddedProfile(client, row), blockedAt: row.blocked_at };
+}
+
+// --------------------------------------------------------------------------
+// get_notifications RPC rows -> Notification (T-31, 20261126000100)
+// --------------------------------------------------------------------------
+
+/** One of a row's `actors`: the embedded profile, plus whether the caller follows them. */
+export interface NotificationActorRpcItem extends EmbeddedProfileRow {
+  is_following: boolean;
+}
+
+/**
+ * One displayed row of `get_notifications`: a follow, a comment, or every like
+ * on one post. The `bev_*` columns are get_feed's, under the same names, and
+ * null for a follow (as `feed_event_id` is).
+ */
+export interface NotificationRpcRow {
+  id: number;
+  kind: string;
+  created_at: string;
+  unread: boolean;
+  actor_count: number;
+  /** At most two, newest first. */
+  actors: NotificationActorRpcItem[] | null;
+  feed_event_id: number | null;
+  bev_id: string | null;
+  bev_name: string | null;
+  bev_brand: string | null;
+  bev_flavor: string | null;
+  bev_category_id: string | null;
+  bev_thumb_path: string | null;
+  bev_price_tier: number | null;
+  bev_price_estimated: boolean | null;
+  bev_status: string | null;
+  bev_rating_count: number | null;
+  /** numeric: PostgREST sends a number, but a string is read too. */
+  bev_bayes_score: number | string | null;
+  bev_icon_path: string | null;
+  comment_id: number | null;
+  comment_body: string | null;
+}
+
+const NOTIFICATION_KINDS: readonly NotificationKind[] = ['follow', 'like', 'comment'];
+
+function notificationKindFromDb(kind: string): NotificationKind {
+  if ((NOTIFICATION_KINDS as readonly string[]).includes(kind)) return kind as NotificationKind;
+  throw new ApiError('unknown', `Unexpected notifications.kind from DB: ${kind}`);
+}
+
+export function mapNotification(client: SupabaseClient, row: NotificationRpcRow): Notification {
+  const actors = (row.actors ?? []).map(
+    (a): ProfileRow => ({ ...mapEmbeddedProfile(client, a), isFollowing: a.is_following === true }),
+  );
+  const bev =
+    row.bev_id && row.bev_name && row.bev_category_id
+      ? mapBevSummary(client, {
+          id: row.bev_id,
+          name: row.bev_name,
+          brand: row.bev_brand,
+          flavor: row.bev_flavor,
+          category_id: row.bev_category_id,
+          photo_path: row.bev_thumb_path,
+          icon_path: row.bev_icon_path,
+          price_tier: row.bev_price_tier ?? 1,
+          price_estimated: row.bev_price_estimated ?? true,
+          bev_stats: {
+            rating_count: row.bev_rating_count ?? 0,
+            avg_score: null,
+            score_stddev: null,
+            bayes_score: row.bev_bayes_score === null ? null : Number(row.bev_bayes_score),
+          },
+        })
+      : null;
+  return {
+    id: String(row.id),
+    kind: notificationKindFromDb(row.kind),
+    createdAt: row.created_at,
+    unread: row.unread,
+    actors,
+    // Never fewer than the actors listed, whatever the server said.
+    actorCount: Math.max(row.actor_count ?? 0, actors.length),
+    postId: row.feed_event_id === null ? null : String(row.feed_event_id),
+    bev,
+    comment:
+      row.comment_id !== null && row.comment_body !== null ? { id: String(row.comment_id), body: row.comment_body } : null,
+  };
+}
+
+// --------------------------------------------------------------------------
+// Push settings and post subscriptions (T-31 Release 2, 20261127000100)
+// --------------------------------------------------------------------------
+
+/** The one row of `get_notification_settings` / `update_notification_settings`. */
+export interface NotificationSettingsRpcRow {
+  paused: boolean;
+  follows: boolean;
+  likes: boolean;
+  comments: boolean;
+  posts: boolean;
+}
+
+export function mapNotificationSettings(row: NotificationSettingsRpcRow): NotificationSettings {
+  return {
+    paused: row.paused === true,
+    follows: row.follows === true,
+    likes: row.likes === true,
+    comments: row.comments === true,
+    posts: row.posts === true,
+  };
+}
+
+/** One row of `get_post_notification_people`: the embedded profile, plus whether a post push is on. */
+export interface PostNotificationPersonRpcRow extends EmbeddedProfileRow {
+  subscribed: boolean;
+}
+
+/** Every row is someone the caller follows, so `isFollowing` is true by construction. */
+export function mapPostNotificationPerson(client: SupabaseClient, row: PostNotificationPersonRpcRow): PostNotificationPerson {
+  return { ...mapEmbeddedProfile(client, row), isFollowing: true, subscribed: row.subscribed === true };
 }
 
 /** One row of `get_followed_by` (20261111000100): who the caller follows that follows `user_id`. */
@@ -320,6 +457,9 @@ export function mapBevSummary(client: SupabaseClient, row: BevSummaryRow): BevSu
     categoryId: row.category_id as CategoryId,
     photoUrl: publicUrl(client, 'bev-photos', row.photo_path),
     iconUrl: publicUrl(client, 'bev-icons', iconPathOf(row)),
+    // Filled in by applyGeneratedIcons() when the Bev has a generated icon of
+    // its own; no RPC returning a summary carries the band.
+    iconLabelBand: null,
     // Placeholder until the process-photo pipeline (milestone 1.6) exists:
     // there's no column tracking async background-removal state yet, so
     // once a Bev has a photo_path it's treated as 'ready'.
@@ -369,10 +509,10 @@ export function mapFlavorProfile(row: FlavorProfileRow): FlavorProfile {
 
 /**
  * A nutrition snapshot as it comes back out of `bev_nutrition.nutrition`, or
- * off the label reader, normalised to what contract 3.1.0 promises.
+ * off the label reader, normalised to what contract 3.10.0 promises.
  *
  * `source` is the reason this mapper exists. Every snapshot written before
- * 3.1.0 was an Open Food Facts barcode match and the column holds the jsonb
+ * 3.10.0 was an Open Food Facts barcode match and the column holds the jsonb
  * exactly as it was stored, with no `source` key at all -- so a Bev created
  * last week would otherwise hand the app a `NutritionPreview` whose `source`
  * is `undefined`, which nothing in the union covers. Those rows are all
@@ -650,7 +790,13 @@ export function mapComment(client: SupabaseClient, row: CommentRpcRow): Comment 
  * The part of a post every surface shares: get_explore returns exactly this,
  * and get_feed returns it plus the four engagement fields (D-15).
  */
-export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor: Profile): ExplorePost {
+export function mapExplorePost(
+  client: SupabaseClient,
+  row: ExploreRpcRow,
+  actor: Profile,
+  /** Where the actor had it (`loadVenuesForPairs`); the RPC row does not carry it. */
+  venue: Venue | null = null,
+): ExplorePost {
   if (!row.bev_id || !row.bev_name || !row.bev_category_id) {
     throw new ApiError('unknown', `feed row ${row.id} is missing its Bev (actor_id=${row.actor_id})`);
   }
@@ -670,6 +816,7 @@ export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor
       categoryId: row.bev_category_id as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', row.bev_thumb_path),
       iconUrl: publicUrl(client, 'bev-icons', row.bev_icon_path ?? null),
+      iconLabelBand: null,
       photoStatus: 'ready',
       priceTier: (row.bev_price_tier ?? 1) as PriceTier,
       priceEstimated: row.bev_price_estimated ?? true,
@@ -681,6 +828,7 @@ export function mapExplorePost(client: SupabaseClient, row: ExploreRpcRow, actor
     note: row.note,
     createdAt: row.created_at,
     inMyWantToTry: row.in_my_want_to_try,
+    venue,
   };
 }
 
@@ -692,7 +840,12 @@ export function mapAlsoBevdItem(client: SupabaseClient, item: AlsoBevdRpcItem): 
   };
 }
 
-export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Profile): FeedItem {
+export function mapFeedItem(
+  client: SupabaseClient,
+  row: FeedRpcRow,
+  actor: Profile,
+  venue: Venue | null = null,
+): FeedItem {
   // A database without 20261111000100 returns no `also_bevd` column. That is
   // the state between this client shipping and the migration being pushed, if
   // they happen in that order, and the feed must keep loading through it: no
@@ -701,7 +854,7 @@ export function mapFeedItem(client: SupabaseClient, row: FeedRpcRow, actor: Prof
   // returns an object), so this branch is dead from then on.
   const also = row.also_bevd ?? { count: 0, items: [] };
   return {
-    ...mapExplorePost(client, row, actor),
+    ...mapExplorePost(client, row, actor, venue),
     likeCount: row.like_count,
     likedByMe: row.liked_by_me,
     commentCount: row.comment_count,
@@ -818,6 +971,7 @@ export function mapBevLeaderboardRow(
       categoryId: row.category_id as CategoryId,
       photoUrl: publicUrl(client, 'bev-photos', row.photo_path),
       iconUrl: publicUrl(client, 'bev-icons', row.icon_path ?? null),
+      iconLabelBand: null,
       photoStatus: 'ready',
       priceTier: row.price_tier as PriceTier,
       priceEstimated: false,
@@ -883,10 +1037,42 @@ export function mapFriendsLeaderboardRow(client: SupabaseClient, row: FriendsLea
   return mapUserLeaderboardRow(client, { ...row, bevi_rank: row.friend_rank });
 }
 
-export function placeholderAppConfig(): AppConfig {
-  // No versioning/maintenance-flag infra exists yet; this is a fixed
-  // placeholder, not a read from the DB, until that's built.
-  return { minAppVersion: '0.1.0', maintenance: false };
+/**
+ * What `meta.getAppConfig` reads of `get_app_config()`'s row, the `app_config`
+ * singleton (20261118210313). The row also carries `id`, `ios_min_build` and
+ * `updated_at`; the contract exposes none of them, so they are not named here.
+ */
+export interface AppConfigRow {
+  min_app_version: string;
+  min_contract_version: string;
+  maintenance: boolean;
+  maintenance_message: string | null;
+}
+
+/**
+ * Throws instead of filling a gap. `get_app_config()` returns a single
+ * composite, so an `app_config` table with no row should come back as a row
+ * of nulls rather than as nothing (Postgres's rule for a null composite in
+ * FROM; not checked against a live stack, and a JSON null is refused the same
+ * way). A missing floor must not become an invented '0.0.0': the app treats
+ * an error here as "gate open", which is the honest reading of "the backend
+ * did not say".
+ */
+export function mapAppConfig(row: AppConfigRow | null | undefined): AppConfig {
+  if (
+    !row ||
+    typeof row.min_app_version !== 'string' ||
+    typeof row.min_contract_version !== 'string' ||
+    typeof row.maintenance !== 'boolean'
+  ) {
+    throw new ApiError('unknown', 'get_app_config returned no row');
+  }
+  return {
+    minAppVersion: row.min_app_version,
+    minContractVersion: row.min_contract_version,
+    maintenance: row.maintenance,
+    maintenanceMessage: row.maintenance_message ?? null,
+  };
 }
 
 // --------------------------------------------------------------------------
@@ -915,11 +1101,30 @@ export interface VenuePinRow {
 const numOrNull = (value: number | string | null): number | null =>
   value === null ? null : Number(value);
 
-function mapVenueFromPin(row: VenuePinRow): Venue {
+/**
+ * A venue as `private.venue_json` builds it (20261119193000), which is also the
+ * venue columns of a `venues_in_view` row: every BEV-22 read returns one of
+ * these under a `venue` key.
+ */
+export type VenueJsonRow = Pick<
+  VenuePinRow,
+  'id' | 'name' | 'kind' | 'lat' | 'lng' | 'address' | 'neighborhood' | 'borough' | 'hours_osm' | 'hours_known' | 'website'
+> & {
+  /** `venues.place_type`. Absent on a `venues_in_view` row, which predates the column. */
+  place_type?: string | null;
+};
+
+/** A stored place type as the contract's, or 'other' for one this client does not know (or none). */
+export function placeTypeFromDb(value: string | null | undefined): PlaceType {
+  return (PLACE_TYPES as readonly string[]).includes(value ?? '') ? (value as PlaceType) : 'other';
+}
+
+export function mapVenue(row: VenueJsonRow): Venue {
   return {
     id: row.id,
     name: row.name,
     kind: row.kind as VenueKind,
+    placeType: placeTypeFromDb(row.place_type),
     lat: Number(row.lat),
     lng: Number(row.lng),
     address: row.address,
@@ -935,7 +1140,7 @@ function mapVenueFromPin(row: VenuePinRow): Venue {
 
 export function mapVenuePin(row: VenuePinRow): VenuePin {
   return {
-    venue: mapVenueFromPin(row),
+    venue: mapVenue(row),
     bestScore: numOrNull(row.best_score),
     predictedScore: numOrNull(row.predicted_score),
     // The RPC leaves this null whenever `hours_known` is false, so the app has
@@ -988,6 +1193,8 @@ export function mapVenueDetail(client: SupabaseClient, rows: VenueDetailRow[]): 
       id: first.venue_id,
       name: first.name,
       kind: first.kind as VenueKind,
+      // `venue_detail` predates place types.
+      placeType: 'other',
       lat: Number(first.lat),
       lng: Number(first.lng),
       address: first.address,

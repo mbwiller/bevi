@@ -5,6 +5,14 @@ import { fireEvent, renderRouter, screen, waitFor } from 'expo-router/testing-li
 import { api } from '@/api/client';
 import { controls } from '@/testing/fakeApi';
 import { useSession } from '@/state/session';
+import { pickImage, preparePhoto } from '@/features/create-bev/photo';
+
+// The picker and the manipulator are native modules (the photo test below sets what they return).
+jest.mock('@/features/create-bev/photo', () => ({
+  ...jest.requireActual('@/features/create-bev/photo'),
+  pickImage: jest.fn(),
+  preparePhoto: jest.fn(),
+}));
 
 const APP_DIR = path.resolve(__dirname, '../../../app');
 
@@ -27,6 +35,29 @@ beforeEach(() => {
 });
 
 describe('onboarding: profile', () => {
+  it('frames a picked photo in the Move and scale step; Cancel leaves it unchanged', async () => {
+    (pickImage as jest.Mock).mockResolvedValue({ uri: 'file:///picked.jpg', width: 3000, height: 4000, mimeType: 'image/jpeg' });
+    (preparePhoto as jest.Mock).mockResolvedValue({
+      uri: 'file:///working.jpg',
+      file: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+      mimeType: 'image/jpeg',
+      width: 1536,
+      height: 2048,
+    });
+    const upload = jest.spyOn(api.media, 'upload');
+    await open('/onboarding/profile');
+    await fireEvent.press(await screen.findByLabelText('Add a photo'));
+    expect(await screen.findByRole('header', { name: 'Move and scale' })).toBeTruthy();
+    expect(preparePhoto).toHaveBeenCalledWith(expect.objectContaining({ uri: 'file:///picked.jpg' }), 2048);
+    expect(screen.getByLabelText('Uploading your photo')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('header', { name: 'Move and scale' })).toBeNull();
+    await waitFor(() => expect(screen.queryByLabelText('Uploading your photo')).toBeNull());
+    expect(upload).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Add a photo')).toBeTruthy();
+    expect((await api.profile.getMe()).avatarUrl).toBeNull();
+  });
+
   it('prefills the name, masks the birthdate and keeps Continue off until both are valid', async () => {
     await open('/onboarding/profile');
     const name = await screen.findByLabelText('Display name');
@@ -63,14 +94,17 @@ describe('onboarding: profile', () => {
     expect(screen.queryByText(/under 21/)).toBeNull();
   });
 
-  it('saves the name with the device timezone, sets the birthdate once, then opens the starter step', async () => {
+  it('saves the name with the device timezone, sets the birthdate once, then opens the go-tos step', async () => {
     const updateMe = jest.spyOn(api.profile, 'updateMe');
     const setBirthDate = jest.spyOn(api.profile, 'setBirthDate');
     const path = await open('/onboarding/profile');
     await fireEvent.changeText(await screen.findByLabelText('Display name'), 'Dee Mo');
     await fireEvent.changeText(screen.getByLabelText('Birthdate'), '19900512');
     await fireEvent.press(continueButton());
-    await waitFor(() => expect(path()).toBe('/onboarding/starter'));
+    await waitFor(() => expect(path()).toBe('/onboarding/picks'));
+    expect(await screen.findByRole('header', { name: 'What are your go-tos?' })).toBeTruthy();
+    // The birthdate set a moment ago already decides the tiles: 21+, so the alcoholic three are there.
+    expect(await screen.findByRole('button', { name: 'Wine' })).toBeTruthy();
     expect(updateMe).toHaveBeenCalledWith({
       displayName: 'Dee Mo',
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,

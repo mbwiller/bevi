@@ -3,7 +3,7 @@
 > Your lane: the Supabase project and everything server-side. Postgres schema, RLS, SQL functions/RPCs, Edge Functions, cron, storage, auth config, the `packages/api` client the app talks through, and the seed catalog with its image pipeline.
 > Matt owns the app, the ranking math, and design. You meet in `shared/` through `contract/*` PRs.
 
-Written 2026-10-09 from `vision.md` (source of truth), `CONVERSATION.md` (raw founding chat), the agreed work-split brief, and the Bev Maps conventions you already use. Facts about Supabase and vendors were checked against current docs on 2026-10-09; where I could not confirm something I say so.
+Written 2026-10-09 from `vision.md` (source of truth), the founding session that produced it, the agreed work-split brief, and the Bev Maps conventions you already use. Facts about Supabase and vendors were checked against current docs on 2026-10-09; where I could not confirm something I say so.
 
 **Decided 2026-10-11 (Matt + Arjun): Bevi is a web app only.** The Expo app is built for the web (`expo export --platform web`), hosted on Vercel and added to the iPhone home screen; the backend stays Supabase. No native builds, EAS, App Store/TestFlight, Android, or Expo Go/dev client as a target. Sign-in is username + password gated by a shared invite code; no OAuth, no third-party services, no emails. Sections below are updated where this changed the plan.
 
@@ -168,7 +168,7 @@ Design decisions you should defend in review:
 4. **Categories are text slugs** (`'soda'`, `'diet_soda'`) so `shared/` enums and the DB agree without a lookup.
 5. **Buckets are `smallint` 1/2/3** in the DB (`1` = DISLIKED, `2` = FINE, `3` = LOVED) so `ORDER BY bucket DESC, position` yields the user's full list best-first. The domain type in `shared/` is `'LOVED' | 'FINE' | 'DISLIKED'`; `packages/api/src/mappers.ts` converts both ways. `insertIndex` 0 = best in the bucket (confirmed with Matt).
 6. **Merged duplicates are kept, not deleted.** `bevs.status = 'merged'` + `merged_into` + a row in `bev_aliases`, so old links and searches still resolve.
-7. **Every Bev-creating or ranking RPC writes a `feed_events` row.** The feed is a query over events, not over rankings, so re-ranks and want-to-try saves can appear without special-casing.
+7. **Every Bev-creating or ranking RPC writes a `feed_events` row.** The feed is a query over events, not over rankings, so re-ranks and want-to-try saves can appear without special-casing. Exception: `submit_ranking` writes none while the caller's `profiles.onboarded` is false, so the starter rankings are never posts (`20261128000100`).
 
 ### 3.1 Extensions
 
@@ -353,6 +353,21 @@ create table public.want_to_try (
   primary key (user_id, bev_id)
 );
 ```
+
+#### `user_category_picks` (DELIVERABLE-44, 20261128000200)
+
+```sql
+create table public.user_category_picks (
+  user_id     uuid        not null references public.profiles(id) on delete cascade,
+  rank        smallint    not null check (rank between 1 and 3),   -- 1 = favourite
+  category_id text        not null references public.categories(id), -- a root (parent_id is null)
+  created_at  timestamptz not null default now(),
+  primary key (user_id, rank),
+  unique (user_id, category_id)
+);
+```
+
+The go-to categories a user picks in onboarding, at most `MAX_CATEGORY_PICKS` (3). Private to the owner: a pick of `beer` would tell a reader the person is 21+. Written only by `set_category_picks()` (§5.6), read directly through RLS by `profile.getCategoryPicks()`.
 
 #### `user_stats` and `user_category_stats`
 
@@ -551,6 +566,7 @@ $$;
 | `rankings` | all (profile feeds are public inside the app) with the same alcohol filter via join | RPC only | RPC only | RPC only | public (age-gated) |
 | `comparisons` | own | RPC only | — | — | private |
 | `want_to_try` | own | own | — | own | private (count is public via `user_stats`) |
+| `user_category_picks` | own | RPC only | RPC only | RPC only | private (no admin read either) |
 | `user_stats`, `user_category_stats`, `streaks` | all | — | — | — | public |
 | `featured_bevs` | all where `now() between starts_at and coalesce(ends_at,'infinity')` | admin | admin | admin | public |
 | `feed_events` | `actor_id = auth.uid()` or actor in my follows | RPC only | — | — | friends-visible |
@@ -611,7 +627,7 @@ begin
   select array_agg(distinct bev_id) into v_bevs from public.rankings where user_id = v_uid;
   delete from storage.objects where bucket_id in ('avatars','raw-uploads') and owner_id = v_uid::text;
   -- bevs they created stay in the catalog with created_by = null (FK on delete set null); say so in the privacy policy
-  delete from auth.users where id = v_uid;      -- cascades: profiles → rankings, comparisons, follows, want_to_try, events, stats
+  delete from auth.users where id = v_uid;      -- cascades: profiles → rankings, comparisons, follows, want_to_try, user_category_picks, events, stats
   perform public.refresh_bev_stats(v_bevs);
   perform public.refresh_global_stats();
 end $$;
@@ -734,6 +750,8 @@ begin
 end $$;
 ```
 
+Since `20261128000100` the `feed_events` insert runs only when the caller's `profiles.onboarded` is true: rankings made on the starter screen keep everything else (ranking, comparisons, stats, `ranking_events`, streak) but are not posts.
+
 Why this is race-safe: the advisory lock serialises all ranking writes for one user inside one transaction; the deferred unique constraint lets the shift happen in one statement; `bev_stats` refresh is idempotent (recomputed from `rankings`, not incremented); the whole thing is one transaction, so a failure anywhere leaves nothing half-applied. Two different users ranking the same Bev at once only contend on the `bev_stats` row, which is a plain upsert.
 
 Helpers (bodies are placeholders until Matt's vectors land):
@@ -839,6 +857,7 @@ User search (`search_users(q)`): trigram on `handle` and `display_name`, limit 2
 | `list_rankings(p_user_id, p_bucket, p_cursor, p_limit)` | `rankings` ⋈ `bev_cards`, ordered `bucket desc, position` | Bev'd list; the app loads one bucket fully before a placement session (binary search needs the ordered list) |
 | `list_want_to_try(p_cursor, p_limit)` | own `want_to_try` ⋈ `bev_cards` ⋈ source profile | |
 | `add_want_to_try(p_bev_id, p_source_ranking_id)` / `remove_want_to_try(p_bev_id)` | | Writes `feed_events('want_to_try')`, refreshes `user_stats.want_count` |
+| `set_category_picks(p_category_ids text[])` | `table (category_id text, rank smallint)`, rank order | DELIVERABLE-44. Replaces the caller's go-to categories (0–3 roots, favourite first; `'{}'` clears) under `pg_advisory_xact_lock('picks:' \|\| uid)`. `BEVI_VALIDATION` (detail `categoryIds`) for null, > 3, a null entry, a repeat, an unknown id or a leaf; `BEVI_AGE_RESTRICTED` for an alcoholic root under 21. No rate limit. Reads need no RPC: `user_category_picks` is selected directly, own rows only |
 | `follow_user(p_user_id)` / `unfollow_user(p_user_id)` | | Updates both users' counts in `user_stats`; `feed_events('followed')` |
 | `get_profile(p_handle)` | profile ⋈ `user_stats` ⋈ `streaks` + `is_following` + `follows_me` | |
 | `get_bev(p_bev_id)` | `bev_cards` + my ranking (if any) + my prediction + friends who ranked it (profiles I follow, with their score) + `in_want_to_try` | One call for the detail page |
@@ -979,7 +998,7 @@ Target ≈ 380 seed Bevs. Enough that onboarding and search feel populated for 2
 | `spirits_cocktails` | 12 | Margarita, Old Fashioned, Espresso Martini, Tito's soda, Jack & Coke, … |
 | `other` | 15 | Horchata, agua fresca (jamaica, tamarindo), Yakult, Calpico, Ramune, kombucha (GT's 4), Vita Coco |
 
-Mark at least 30 as `is_starter` (the Coke/Diet Coke/Sprite/LaCroix/Red Bull tier of fame), none alcoholic, so `getStarterCandidates()` always returns ≥ 30 even for minors; Matt's `selectStarterSet()` picks 10 of them client-side.
+Mark at least 30 as `is_starter` (the Coke/Diet Coke/Sprite/LaCroix/Red Bull tier of fame), at least 30 of them non-alcoholic, so `getStarterCandidates()` always returns ≥ 30 even for minors (the catalog now flags 77, four or five in most categories, beer, wine and spirits among them: the age filter hides those from anyone who cannot see alcohol); Matt's `selectStarterSet()` picks 10 of them client-side.
 
 ### 7.2 Source format and rules
 
@@ -1008,7 +1027,7 @@ Honest position: manufacturer packshots are copyrighted; using them as catalog i
 
 Every seed image keeps `image_source_url`, `image_license`, `image_attribution`, so any one can be swapped on request. Never scrape Google Images; never use Amazon listing photos.
 
-**Style standard (Matt reviews the contact sheet against the Beli screenshots and UI spec in `bevi-ui-inspiration/`, where Matt's reference material now lives):** transparent background; subject fills ~85% of the height; square canvas 1024×1024 with the product centered and bottom-aligned; no shadows; WebP with alpha (PNG fallback only if an edge halo is visible). Thumbs 256×256 same framing.
+**Style standard (Matt reviews the contact sheet against the UI spec in `bevi-ui-inspiration/beli-screens-spec.md`):** transparent background; subject fills ~85% of the height; square canvas 1024×1024 with the product centered and bottom-aligned; no shadows; WebP with alpha (PNG fallback only if an edge halo is visible). Thumbs 256×256 same framing.
 
 ### 7.4 Background-removal pipeline (user uploads and seeds)
 
@@ -1106,7 +1125,7 @@ Integrator agent (`.claude/agents/integrator.md`, `chore/*` PR with Matt): same 
 ### 8.2 Observability
 
 - Free plan keeps logs 1 day. For anything you want to see later: Edge Functions log a single JSON line per invocation (`{fn, user_id, ms, ok, err}`) and the `recommend`/`process-photo` functions write outcome rows (`photo_jobs.error`, `recommendation_jobs.attempts`) so failures are in the DB, not the logs.
-- Sentry's Deno SDK in the two Edge Functions is cheap (free tier) and worth it from Phase 2; optional in Phase 1.
+- ~~Sentry's Deno SDK in the two Edge Functions~~ Not planned: on 2026-11-19 Sentry was dropped for the app in favour of building error reporting in house (`DEVELOPMENT-ARJUN-IOS.md`, IS-4), and the same holds here. Edge Function errors are read from the Supabase logs until that exists.
 - Weekly 5-minute check: `cron.job_run_details` failures, `recommendation_jobs` with `attempts >= 3`, `photo_jobs` errors, `bev_reports` open, dashboard → Reports for egress.
 - Dashboard Advisors (Security / Performance) after every schema change: they catch missing RLS and missing FK indexes.
 
@@ -1183,7 +1202,7 @@ Branches: Matt uses `ui/*` (app) and `rank/*` (ranking package); Arjun uses `be/
 | Matt | Search, lists, leaderboard, want-to-try methods | Arjun | Nov 6 | Mock API |
 | Matt | Feed, follows, featured | Arjun | Nov 20 | Mock API |
 | Matt | Recommendations/predicted score served from cache | Arjun | Dec 4 | Mock returns fixture predictions |
-| Matt | Catalog image contact sheet to review against `bevi-ui-inspiration/` | Arjun | Oct 23 | — |
+| Matt | Catalog image contact sheet to review against `bevi-ui-inspiration/beli-screens-spec.md` | Arjun | Oct 23 | — |
 | Arjun | Per-screen data needs | Matt | Oct 13 | Draft schema from vision.md (this doc) |
 | Arjun | Per-screen additions to the `BeviApi` surface | Matt | Oct 16 | Build from §6.1 |
 | Arjun | `scoreFromPosition`, stats (`stddev_pop`, z-score) and `bayesAverage` vectors | Matt | Oct 23 | Agreed formulas implemented from §5.2/§5.10, unverified by CI |
@@ -1239,7 +1258,7 @@ Tags: model/effort for the Claude Code sub-agent per vision §10. "DoD" = defini
 | 2.3 | Streaks (`touch_streak`, hourly reset) and user rank cron with vectors | Vectors pass; timezone edge cases tested (23:59 PT) | Sonnet, medium |
 | 2.4 | `recommend` Edge Function: bundle step, snapshot builder, queue + cron, cache table, `getRecommendations`, `predictedScore` in `get_bev` | For seeded users, Recommended list populates within 1 minute of ranking; CPU < 2 s per invocation (log it) | Opus, high for snapshot/CPU-budget design; Sonnet, medium to implement |
 | 2.5 | Moderation: `report_bev`, `moderation_queue`, admin RPCs (`merge_bevs`, `hide_bev`) | Merge test with a user who ranked both | Sonnet, medium |
-| 2.6 | Sentry in Edge Functions; weekly ops checklist | Errors visible | Haiku, low |
+| 2.6 | ~~Sentry in Edge Functions~~ (dropped 2026-11-19, see IS-4); weekly ops checklist | Errors visible | Haiku, low |
 | 2.7 | Code review / bug hunt before Phase 2 ships | | Sonnet, high |
 
 ### Phase 3 — Smarter and bigger (2027 Q1)
@@ -1374,8 +1393,11 @@ Everything the backend still carries only for clients that have not been gated o
 | Thing | Where | Last contract version that used it | Safe to delete when | Note |
 |---|---|---|---|---|
 | _(worked example, not real)_ `get_bev` | `supabase/migrations/<ts>_bev_reads.sql` | 2.17.0 | `min_contract_version >= 2.18.0` **and** `min_app_version >= 1.4.0` | Superseded by `get_bev_v2`, which returns `nutrition` as columns instead of nested json. Drop the function and this row in the same PR. |
-| `create_bev_with_nutrition` | `supabase/migrations/20261115214237_barcode_nutrition.sql` | 3.0.0 | `min_contract_version >= 3.1.0` | Superseded by `create_bev_with_nutrition_v2` (`20261119190000_nutrition_label_ocr.sql`, BEV-13), which takes the snapshot's `source` and accepts a label reading. v1 only ever accepts an Open Food Facts snapshot, so a 3.1.0 client calls v2 for both kinds and nothing new calls v1. No `min_app_version` line **while no native build has shipped**: the app is still web-only, so there is no installed binary pinned to a contract. The first TestFlight build carrying 3.0.0 makes that line mandatory -- treat this sentence as expiring then, not as a standing fact. Drop the function and this row in the same PR. |
+| `create_bev_with_nutrition` | `supabase/migrations/20261115214237_barcode_nutrition.sql` | 3.9.0 | `min_contract_version >= 3.10.0` **and** `min_app_version` past the last build cut before contract 3.10.0 **and** TestFlight builds 0.1.0 (2) and (3) expired or removed (2027-02-17 at the latest) | Superseded by `create_bev_with_nutrition_v2` (`20261130000100_nutrition_label_ocr.sql`, BEV-13), which takes the snapshot's `source` and accepts a label reading. v1 only ever accepts an Open Food Facts snapshot, so a 3.10.0 client calls v2 for both kinds and nothing new calls v1. Every installed binary cut before 3.10.0 calls v1 when it saves a barcode match, and builds (2) and (3) never read `app_config` (below), so no floor moves them: v1 lives until they are gone. Drop the function and this row in the same PR. |
 
-The first real row is `create_bev_with_nutrition`, above: contract 3.1.0 reads nutrition snapshots that did not come from a barcode, so `packages/api` calls `create_bev_with_nutrition_v2` for every create and the old function is carried only for a client still on 3.0.0 or older. Nothing else on `main` qualifies, and that is a fact about the world rather than an oversight: the app and the backend otherwise still deploy together. The worked example stays as the format reference.
+What a row costs changed on 2026-11-19: **there is now a client a migration cannot move.** TestFlight builds 0.1.0 (2) and (3) were cut from `e1f0b1f`, whose client code is contract **2.15.0**, and they stay installable until TestFlight expires them 90 days after upload (2027-02-17). Two things follow.
 
-Two near-term changes deliberately produce no row: IA-2 deletes `placeholderAppConfig()`, which is internal to `packages/api` and reaches no shipped client, and IA-4 widens `UploadMediaInput.file`, which is additive. The first real row comes from the first change that cannot be made additively once a TestFlight build exists.
+- **Those builds cannot be gated.** At `e1f0b1f`, `meta.getAppConfig()` still returned the hardcoded placeholder: the builds never call `get_app_config`, so no value of `min_app_version`, `min_contract_version` or `maintenance` reaches them. The first build that reads the row is the first one cut after contract 3.2.0 (#275). Until builds 2 and 3 have expired or been removed from TestFlight, every shape contract 2.15.0 reads is live, whatever the support window in §14 says, and raising a floor does nothing for them.
+- **The first real row** is `create_bev_with_nutrition`, above: contract 3.10.0 saves nutrition snapshots that did not come from a barcode, so `packages/api` calls `create_bev_with_nutrition_v2` for every create, and the old function is carried only for the binaries cut before it. The worked example stays as the format reference.
+
+Two near-term changes deliberately produce no row: IA-2 deletes `placeholderAppConfig()`, which is internal to `packages/api` and reaches no shipped client, and IA-4 widens `UploadMediaInput.file`, which is additive. 

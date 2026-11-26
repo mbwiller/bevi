@@ -14,6 +14,8 @@ export interface ExplorePostItemProps {
   onFollow: () => void;
   onOpenBev: () => void;
   onOpenActor: () => void;
+  /** Opens the post's More menu (Report post, Block account). */
+  onMore: () => void;
 }
 
 /**
@@ -21,7 +23,7 @@ export interface ExplorePostItemProps {
  * heart, counts, comments, Rank it or Want to Try, and no double-tap; tapping the photo opens the
  * Bev, the avatar opens the author's profile, and the author's Follow pill leads the action row.
  */
-export const ExplorePostItem = memo(function ExplorePostItem({ item, following, onFollow, onOpenBev, onOpenActor }: ExplorePostItemProps) {
+export const ExplorePostItem = memo(function ExplorePostItem({ item, following, onFollow, onOpenBev, onOpenActor, onMore }: ExplorePostItemProps) {
   const { colors } = useTheme();
   return (
     <View testID={`explore-post-${item.id}`} style={[styles.item, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -32,9 +34,14 @@ export const ExplorePostItem = memo(function ExplorePostItem({ item, following, 
         bucket={item.bucket}
         note={item.note}
         time={item.createdAt}
+        // Text, not a link: the map draws the viewer and the people they follow, and an Explore
+        // author is neither, so there would be no pin to open.
+        place={item.venue?.name}
         following={following}
         onFollow={onFollow}
         onOpen={onOpenBev}
+        onMore={onMore}
+        moreLabel={`More actions, post by @${item.actor.handle}`}
         divider={false}
       />
       <ActorLink label={actorLabel(item.actor)} onPress={onOpenActor} />

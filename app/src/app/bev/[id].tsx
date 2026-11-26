@@ -1,23 +1,25 @@
 import { NutritionCard } from '@/features/create-bev/NutritionCard';
 import { isApiError } from '@bevi/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useContext, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaInsetsContext, SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAddWantToTry, useBev, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
+import { useAddWantToTry, useBev, useBevIcon, useMe, useRemoveWantToTry, useStats } from '@/api/hooks';
 import { Arrive, useArrival } from '@/components/Arrive';
 import { bevImageProps, brandLine } from '@/components/BevParts';
 import { BevImage } from '@/components/BevImage';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Header } from '@/components/Header';
-import { PRESSED } from '@/components/HitTarget';
 import { Icon } from '@/components/Icon';
 import { Pill } from '@/components/Pill';
+import { FeedbackPressable } from '@/components/PressFeedback';
 import { PriceTier } from '@/components/PriceTier';
 import { Skeleton } from '@/components/Skeleton';
 import { BevStats, FriendsRow } from '@/features/bev/BevStats';
+import { GeneratedIconPanel, showGeneratedIcon } from '@/features/bev/GeneratedIconPanel';
+import { openingFrom } from '@/features/bev/imageOrigin';
 import { ReportSheet } from '@/features/bev/ReportSheet';
 import { SimilarBevs } from '@/features/bev/SimilarBevs';
 import { categoryById } from '@/lib/categories';
@@ -43,6 +45,8 @@ function DetailSkeleton() {
 /** Bev detail (§6.11): hero, Bevi score and your score or prediction, friends, Rank it and Want to Try. */
 export default function BevDetailScreen() {
   const { colors } = useTheme();
+  // A pushed screen has no tab bar: its scroll end clears the home indicator itself.
+  const bottomInset = useContext(SafeAreaInsetsContext)?.bottom ?? 0;
   const router = useRouter();
   const back = useBack();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,11 +56,21 @@ export default function BevDetailScreen() {
   const add = useAddWantToTry();
   const remove = useRemoveWantToTry();
   const [reporting, setReporting] = useState(false);
+  // The hero tile, so the image viewer can grow out of it (imageOrigin.ts).
+  const heroTile = useRef<View>(null);
   // Arrive: what replaces the skeleton rises in once (not on a refetch, nor for a Bev already cached).
   const arrival = useArrival(query.isPending);
 
   const bev = query.data;
   const cat = bev ? categoryById(bev.categoryId) : undefined;
+  // Both ids have to be there: `undefined === undefined` would make every viewer the
+  // owner of every catalog Bev while `me` is still loading.
+  const isBevOwner = !!bev?.createdBy && !!me.data && bev.createdBy.id === me.data.id;
+  // Only a Bev someone created can have a generated icon, so a catalog Bev spends no
+  // lookup on one. A failure here leaves the panel out: an illustration is decoration,
+  // and the screen already has the photo.
+  const iconQuery = useBevIcon(id, { enabled: !!bev?.createdBy });
+  const showGeneratedIconPanel = showGeneratedIcon(iconQuery.data, isBevOwner);
   // The server already refuses these (`age_restricted`); this covers a cached Bev after the profile changes.
   const hidden = !!cat?.isAlcoholic && me.data?.canSeeAlcohol === false;
   const code = isApiError(query.error) ? query.error.code : undefined;
@@ -87,22 +101,31 @@ export default function BevDetailScreen() {
     body = <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
   } else {
     const brand = brandLine(bev);
-    // Only a real photo opens the viewer; an authored icon (bevImageProps' fallback) is art, not a photo.
+    // Only a real photo opens the viewer, and the hero may now be the Bev's icon rather than the
+    // photo (`bevImageProps` puts the icon first): tapping it still shows the photograph it was
+    // made from, and a Bev with no photo is not pressable at all.
     const photo = bev.photoUrl;
     const ranked = !!bev.myRanking;
     const image = <BevImage size={HERO} {...bevImageProps(bev)} />;
     body = (
       <>
-        <View style={styles.hero}>
+        <View style={[styles.hero, showGeneratedIconPanel && styles.heroBeforeIcon]}>
           {photo ? (
-            <Pressable
+            // Press, not the Pills' brightness dim: on iOS that dim is a pale layer over the Pressable's
+            // whole box, and around a rounded tile it showed as four light corners on a dark page (T-26).
+            <FeedbackPressable
               accessibilityRole="imagebutton"
               accessibilityLabel={`View photo of ${bev.name}`}
-              onPress={() => router.push({ pathname: '/image/[url]', params: { url: photo } })}
-              style={({ pressed }) => pressed && PRESSED}
+              onPress={() => {
+                // The viewer grows out of the tile and goes back into it.
+                openingFrom(heroTile.current);
+                router.push({ pathname: '/image/[url]', params: { url: photo } });
+              }}
             >
-              {image}
-            </Pressable>
+              <View ref={heroTile} collapsable={false}>
+                {image}
+              </View>
+            </FeedbackPressable>
           ) : (
             image
           )}
@@ -119,7 +142,13 @@ export default function BevDetailScreen() {
           </View>
         </View>
 
-        <BevStats bev={bev} myRankingCount={stats.data?.bevdCount} />
+        {showGeneratedIconPanel ? (
+          <GeneratedIconPanel icon={iconQuery.data} isOwner={isBevOwner} />
+        ) : null}
+
+        <View style={showGeneratedIconPanel ? styles.statsAfterIcon : undefined}>
+          <BevStats bev={bev} myRankingCount={stats.data?.bevdCount} />
+        </View>
 
         {bev.myRanking?.note ? (
           <View style={[styles.note, { borderColor: colors.border }]}>
@@ -187,7 +216,7 @@ export default function BevDetailScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: colors.surface }]}>
       {header}
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xxl + bottomInset }]}>
         {query.isPending ? body : <Arrive progress={arrival}>{body}</Arrive>}
       </ScrollView>
     </SafeAreaView>
@@ -198,6 +227,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   scroll: { paddingBottom: spacing.xxl },
   hero: { alignItems: 'center', gap: spacing.xs, paddingTop: spacing.xs, paddingBottom: spacing.lg, paddingHorizontal: spacing.gutter },
+  heroBeforeIcon: { paddingBottom: 0 },
+  statsAfterIcon: { marginTop: spacing.lg },
   name: { marginTop: spacing.md },
   center: { textAlign: 'center' },
   catLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: 2 },

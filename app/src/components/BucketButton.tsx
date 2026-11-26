@@ -57,6 +57,8 @@ export function BucketButton({ bucket, selected = false, dimmed = false, onPress
       accessibilityRole="button"
       accessibilityLabel={BUCKET_LABEL[bucket]}
       aria-pressed={selected}
+      // React Native maps no `aria-pressed` on iOS; VoiceOver reads the state from here.
+      accessibilityState={{ selected }}
       style={[styles.base, style]}
     >
       {({ pressed }) => (

@@ -1,4 +1,4 @@
-import type { CategoryId, PriceTier, NutritionPreview } from '@bevi/shared';
+import type { BarcodeProduct, CategoryId, PriceTier, NutritionPreview } from '@bevi/shared';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BevImage } from '@/components/BevImage';
@@ -10,8 +10,8 @@ import { TextField } from '@/components/TextField';
 import { categoryById, type CategoryInfo } from '@/lib/categories';
 import { radius, size, spacing, type, useTheme } from '@/theme';
 
-import { NutritionScan } from './NutritionScan';
-import { categoryHintText, NAME_MAX_LENGTH, categoryUseLabel, categoryUseText } from './copy';
+import { NutritionLabelRead, NutritionScanResult, NutritionScanSheet, useNutritionScan } from './NutritionScan';
+import { categoryHintText, NAME_MAX_LENGTH, categoryUseLabel, categoryUseText, SCAN_CONFIRM_NUTRITION, SCAN_HINT } from './copy';
 import { PhotoStatusLine } from './PhotoStep';
 import type { PhotoSource } from './photo';
 import type { PhotoUpload } from './usePhotoUpload';
@@ -35,6 +35,13 @@ export interface DetailsStepProps {
   label: PhotoUpload;
   nutrition: NutritionPreview | null;
   onNutritionChange: (value: NutritionPreview | null) => void;
+  /** The label the last scan found, confirmed or not. The wizard keeps it so it outlives this step. */
+  scanned: NutritionPreview | null;
+  onScannedChange: (value: NutritionPreview | null) => void;
+  /** A barcode scan found the product: the wizard fills in the fields above from it. */
+  onProduct: (product: BarcodeProduct) => boolean | void;
+  /** What the last scan filled in, in place of the hint under Scan barcode. */
+  scanNotice?: string | null;
   onPickLabel: (source: PhotoSource) => void;
   /** "2 Bevs like this are already on Bevi" while typing. */
   similarCount: number;
@@ -77,12 +84,31 @@ function CategoryField({ value, error, onPress }: { value: CategoryId | null; er
   );
 }
 
-/** Step 2: name, brand, flavor, category, price, and an optional nutrition label photo. */
-export function DetailsStep({ form, errors, onChange, onOpenCategories, label, onPickLabel, nutrition, onNutritionChange, similarCount, categoryHint = null, onUseCategory }: DetailsStepProps) {
+/**
+ * Step 2: name, brand, flavor, category, price, and an optional nutrition label photo. A barcode scan
+ * at the top fills in what the product database knows; the label it found waits with the nutrition.
+ */
+export function DetailsStep({ form, errors, onChange, onOpenCategories, label, onPickLabel, nutrition, onNutritionChange, scanned, onScannedChange, onProduct, scanNotice = null, similarCount, categoryHint = null, onUseCategory }: DetailsStepProps) {
   const { colors } = useTheme();
+  const scan = useNutritionScan({ value: nutrition, onChange: onNutritionChange, onProduct, scanned, onScanned: onScannedChange, label, onPickLabel, draftName: form.name });
   const hasLabel = !!label.photo;
+  // The label a scan found is attached only by "Use this label", further down than the fields the
+  // same scan filled in: say so for as long as it is waiting there.
+  const unconfirmed = !!scan.nutrition && scan.nutrition !== nutrition;
+  const notice = scanNotice ? (unconfirmed ? `${scanNotice} ${SCAN_CONFIRM_NUTRITION}` : scanNotice) : null;
   return (
     <View style={styles.body}>
+      {scan.available ? (
+        <View style={styles.field}>
+          <Button variant="outlined" icon="camera" onPress={scan.start} accessibilityLabel="Scan barcode to fill in details">
+            Scan barcode
+          </Button>
+          {/* A live region from the start: one added together with its text is not announced on the web. iOS is told by the wizard. */}
+          <Text style={[type.caption, { color: colors.textSecondary }]} role="status" accessibilityLiveRegion="polite">
+            {notice ?? SCAN_HINT}
+          </Text>
+        </View>
+      ) : null}
       <TextField
         label="Name"
         placeholder="Mexican Coke"
@@ -141,7 +167,8 @@ export function DetailsStep({ form, errors, onChange, onOpenCategories, label, o
       </View>
       <View style={styles.field}>
         <Text style={[type.caption, styles.label, { color: colors.textSecondary }]}>Nutrition label (optional)</Text>
-        <NutritionScan value={nutrition} onChange={onNutritionChange} label={label} onPickLabel={onPickLabel} draftName={form.name} />
+        <NutritionScanResult scan={scan} />
+        <NutritionLabelRead scan={scan} />
         {errors.nutrition ? <Text role="alert" style={[type.caption, { color: colors.scoreLow }]}>{errors.nutrition}</Text> : null}
         <View style={styles.labelRow}>
           <BevImage size={size.scoreBubbleLg} src={label.photo?.uri} alt={hasLabel ? 'Nutrition label photo' : 'No label photo'} />
@@ -163,6 +190,7 @@ export function DetailsStep({ form, errors, onChange, onOpenCategories, label, o
           </Text>
         ) : null}
       </View>
+      <NutritionScanSheet scan={scan} />
     </View>
   );
 }

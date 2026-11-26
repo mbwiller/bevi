@@ -16,6 +16,13 @@ update public.profiles set birth_date = (current_date - interval '30 years')::da
               '00000000-0000-4000-8000-0000000000d2',
               '00000000-0000-4000-8000-0000000000d3');
 
+-- Onboarded, because submit_ranking posts nothing before onboarding ends
+-- (20261128000100) and this file's rankings are meant to be posts.
+update public.profiles set onboarded = true
+ where id in ('00000000-0000-4000-8000-0000000000d1',
+              '00000000-0000-4000-8000-0000000000d2',
+              '00000000-0000-4000-8000-0000000000d3');
+
 -- d2 follows d1, so d1's post is in d2's feed. d3 follows nobody.
 insert into public.follows (follower_id, followee_id)
 values ('00000000-0000-4000-8000-0000000000d2', '00000000-0000-4000-8000-0000000000d1');

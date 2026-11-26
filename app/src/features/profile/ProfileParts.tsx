@@ -1,11 +1,13 @@
 import type { Profile, ProfileStats } from '@bevi/shared';
-import type { ReactNode } from 'react';
+import { useRouter } from 'expo-router';
+import { useRef, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { FeedbackPressable } from '@/components/PressFeedback';
 import { Skeleton } from '@/components/Skeleton';
 import { StatCard } from '@/components/StatCard';
+import { openingFrom } from '@/features/bev/imageOrigin';
 import { formatCount } from '@/lib/format';
 import { MAX_FONT_SCALE_DENSE, size, spacing, type, useTheme } from '@/theme';
 
@@ -68,13 +70,37 @@ export interface ProfileHeroProps {
   onFollowing?: () => void;
 }
 
-/** Avatar 100, @handle, "Member since", then Bev'd · Followers · Following. */
+/**
+ * Avatar 100, @handle, "Member since", then Bev'd · Followers · Following. A photo opens full screen
+ * as a large circle that grows out of the avatar (T-29); initials are not pressable.
+ */
 export function ProfileHero({ profile, stats, onBevd, bevdLabel, onFollowers, onFollowing }: ProfileHeroProps) {
   const { colors } = useTheme();
+  const router = useRouter();
+  const avatarView = useRef<View>(null);
+  const photo = profile.avatarUrl;
+  const avatar = <Avatar name={profile.displayName} src={photo ?? undefined} size={AVATAR} />;
   return (
     <View>
       <View style={styles.identity}>
-        <Avatar name={profile.displayName} src={profile.avatarUrl ?? undefined} size={AVATAR} />
+        {photo ? (
+          // Press, not the brightness dim, as on the Bev page's hero (T-26).
+          <FeedbackPressable
+            accessibilityRole="imagebutton"
+            accessibilityLabel={`View profile photo of @${profile.handle}`}
+            onPress={() => {
+              // The viewer grows out of the avatar and goes back into it.
+              openingFrom(avatarView.current);
+              router.push({ pathname: '/image/[url]', params: { url: photo, shape: 'circle' } });
+            }}
+          >
+            <View ref={avatarView} collapsable={false}>
+              {avatar}
+            </View>
+          </FeedbackPressable>
+        ) : (
+          avatar
+        )}
         <Text style={[type.heading, styles.handle, { color: colors.text }]} numberOfLines={1}>
           @{profile.handle}
         </Text>

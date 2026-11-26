@@ -18,7 +18,7 @@ const slot = {
 afterEach(() => jest.restoreAllMocks());
 
 it('keeps the barcode route and the plain label upload, and shows no button that cannot work', async () => {
-  jest.spyOn(api.nutrition!, 'lookupBarcode').mockResolvedValue(null);
+  jest.spyOn(api.nutrition!, 'lookupProduct').mockResolvedValue(null);
   await render(<NutritionScan value={null} onChange={jest.fn()} label={slot} onPickLabel={jest.fn()} />);
   expect(screen.getByLabelText('Scan barcode for nutrition')).toBeTruthy();
   expect(screen.queryByLabelText('Read nutrition from the label photo')).toBeNull();
