@@ -989,7 +989,7 @@ describe('blocks and reports', () => {
   });
 });
 
-// DELIVERABLE-44: go-to categories, with set_category_picks' rules (20261126000200).
+// DELIVERABLE-44: go-to categories, with set_category_picks' rules (20261128000200).
 describe('category picks', () => {
   it('is [] until set; set returns and reads back favourite first; replace and clear', async () => {
     const api = make();

@@ -985,7 +985,7 @@ This is your input to seam 2. Field names are proposals; Arjun owns the schema a
 | `profile.getMe()` | → `Profile` | root gate, 6.13 |
 | `profile.updateMe(patch)` | `{ displayName?, handle?, timezone?, onboarded? }` → `Profile` | 6.2, 6.3, 6.18 |
 | `profile.setBirthDate(date)` | set once; a second call is `validation`; admin-only change afterwards | 6.2 |
-| `profile.getCategoryPicks()` / `setCategoryPicks(ids)` | → `CategoryId[]`, favourite first (`[]` until set); set replaces them: 0–`MAX_CATEGORY_PICKS` top-level ids, no repeats, `[]` clears; `validation` (field `categoryIds`), `age_restricted` for an alcoholic one under 21. Private to the caller. Hooks `useCategoryPicks` / `useSetCategoryPicks` (DELIVERABLE-44, contract 3.7.0) | onboarding |
+| `profile.getCategoryPicks()` / `setCategoryPicks(ids)` | → `CategoryId[]`, favourite first (`[]` until set); set replaces them: 0–`MAX_CATEGORY_PICKS` top-level ids, no repeats, `[]` clears; `validation` (field `categoryIds`), `age_restricted` for an alcoholic one under 21. Private to the caller. Hooks `useCategoryPicks` / `useSetCategoryPicks` (DELIVERABLE-44, contract 3.9.0) | onboarding |
 | `profile.checkHandle(handle)` | → `{ available }`; callable signed out (sign-up form) | 6.1, 6.19 |
 | `profile.getUser(id)` / `searchUsers({ q, limit })` | → `Profile` / `Profile[]` | 6.14, 6.8 Search tab (People group) |
 | `stats.getMine()` / `stats.getUser(id)` | → `ProfileStats` | 6.13, 6.14 |

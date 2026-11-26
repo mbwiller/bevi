@@ -10,7 +10,7 @@
 -- reads `category_id, rank` ordered by `rank`), the way `want_to_try` is read:
 -- an own-row table needs no definer to read it.
 --
--- Additive only: two new objects, nothing existing is changed. Contract 3.7.0.
+-- Additive only: two new objects, nothing existing is changed. Contract 3.9.0.
 --
 -- PRIVATE TO THEIR OWNER. Unlike a ranking, a pick is not shown to anyone else,
 -- admin included: a public "beer" pick would tell every reader that the person
