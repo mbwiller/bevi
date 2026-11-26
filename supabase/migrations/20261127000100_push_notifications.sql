@@ -31,8 +31,7 @@
 --
 --   Internal (no role may execute them; definer functions call them):
 --     blocked_between(uuid, uuid), user_is_adult(uuid),
---     visible_notifications_for(uuid), unread_notification_count_for(uuid),
---     notification_settings_of(uuid), the trigger functions, push_poke(text),
+--     visible_notifications_for(uuid), notification_settings_of(uuid), the trigger functions, push_poke(text),
 --     drain_push_outbox() (pg_cron, every minute)
 --
 --   Re-created: public.visible_notifications(), Release 1's own internal
@@ -193,33 +192,10 @@ as $$
   select vn.* from public.visible_notifications_for(auth.uid()) vn;
 $$;
 
--- get_unread_notification_count's grouping (20261126000100, section 5) for
--- p_user: the number of DISPLAYED rows with anything unread, a row of likes on
--- one post counting once. The badge a push carries. KEEP IN STEP with
--- get_unread_notification_count, which cannot be re-created to call this.
-create or replace function public.unread_notification_count_for(p_user uuid)
-returns integer
-language sql
-stable
-security definer
-set search_path = public, extensions
-as $$
-  select count(*)::integer
-    from (
-      select 1
-        from public.visible_notifications_for(p_user) vn
-       group by vn.kind,
-                case when vn.kind = 'like' then vn.feed_event_id end,
-                case when vn.kind = 'like' then null else vn.id end
-      having bool_or(vn.read_at is null)
-    ) unread_rows;
-$$;
-
 alter function public.blocked_between(uuid, uuid) owner to postgres;
 alter function public.user_is_adult(uuid) owner to postgres;
 alter function public.visible_notifications_for(uuid) owner to postgres;
 alter function public.visible_notifications() owner to postgres;
-alter function public.unread_notification_count_for(uuid) owner to postgres;
 -- Internal: called only by other definer functions owned by postgres, which
 -- need no EXECUTE. `anon`, `authenticated` and `service_role` are named because
 -- Supabase's default privileges grant them directly, which a revoke from PUBLIC
@@ -228,7 +204,6 @@ revoke execute on function public.blocked_between(uuid, uuid) from public, anon,
 revoke execute on function public.user_is_adult(uuid) from public, anon, authenticated, service_role;
 revoke execute on function public.visible_notifications_for(uuid) from public, anon, authenticated, service_role;
 revoke execute on function public.visible_notifications() from public, anon, authenticated;
-revoke execute on function public.unread_notification_count_for(uuid) from public, anon, authenticated, service_role;
 
 comment on function public.blocked_between(uuid, uuid) is
   'T-31, internal: a block between the two users in either direction. private.is_blocked for an explicit pair (that one reads auth.uid()); keep the two in step. No role may execute it.';
@@ -238,8 +213,6 @@ comment on function public.visible_notifications_for(uuid) is
   'T-31, internal: the user''s notifications that are still true (not blocked either way, the follow / like still there, the comment not deleted, the age gate). The one definition: visible_notifications() is this for auth.uid(), and claim_push_batch reads it for a push''s recipient. No role may execute it.';
 comment on function public.visible_notifications() is
   'T-31, internal: visible_notifications_for(auth.uid()). Read by get_notifications, get_unread_notification_count and mark_notifications_read so they never disagree. No client role may execute it.';
-comment on function public.unread_notification_count_for(uuid) is
-  'T-31, internal: get_unread_notification_count for an explicit user, the badge a push carries. Keep the grouping in step with get_unread_notification_count. No role may execute it.';
 
 -- ============================================================================
 -- 2. notification_settings
@@ -413,13 +386,23 @@ comment on table public.post_notification_subscriptions is
 -- ----------------------------------------------------------------------------
 -- 3a. set_post_notification
 -- ----------------------------------------------------------------------------
--- On: the person must exist and not be across a block either way (both
--- BEVI_NOT_FOUND, as follow_user answers them), and the caller must follow
--- them (BEVI_VALIDATION 'not following'; that also covers the caller
--- themselves). Off: always resolves. Idempotent both ways.
+-- On: the caller must follow them. With no follow edge the answer is always
+-- BEVI_VALIDATION 'not following' -- for a person who does not exist, for the
+-- caller themselves, and for someone across a block (a block deletes the
+-- follow both ways and follow_user refuses across one) -- so the answer never
+-- tells "blocked or absent" from "exists". BEVI_NOT_FOUND is left only for a
+-- follow edge that stands beside a block, which no client path can produce.
+-- Off: always resolves, never rate-limited. Idempotent both ways.
 --
--- Rate-limited like follow_user's neighbours: 200 a day is far past any real
--- use of a settings screen and still caps a runaway client.
+-- THE RACE WITH AN UNFOLLOW. The follow row is read `for key share`, which a
+-- concurrent DELETE of it must wait for. So either the unfollow committed
+-- first (no row: 'not following'), or it waits for this transaction and its
+-- AFTER DELETE trigger then removes the subscription inserted here. Without
+-- the lock both could commit and leave a subscription with no follow, which a
+-- later re-follow would bring back.
+--
+-- Turning ON is rate-limited like follow_user's neighbours: 200 a day is far
+-- past any real use of a settings screen and still caps a runaway client.
 
 create or replace function public.set_post_notification(p_user_id uuid, p_on boolean)
 returns void
@@ -437,25 +420,24 @@ begin
     raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'on';
   end if;
 
-  perform public.assert_rate('set_post_notification', 200, interval '1 day');
-
   if not p_on then
     delete from public.post_notification_subscriptions s
      where s.subscriber_id = v_uid and s.target_id = p_user_id;
     return;
   end if;
 
-  if p_user_id is null
-     or not exists (select 1 from public.profiles p where p.id = p_user_id)
-     or private.is_blocked(p_user_id) then
-    raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
+  perform public.assert_rate('set_post_notification', 200, interval '1 day');
+
+  perform 1
+     from public.follows f
+    where f.follower_id = v_uid and f.followee_id = p_user_id
+      for key share;
+  if not found then
+    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'not following';
   end if;
 
-  if not exists (
-    select 1 from public.follows f
-     where f.follower_id = v_uid and f.followee_id = p_user_id
-  ) then
-    raise exception 'BEVI_VALIDATION' using errcode = '22023', detail = 'not following';
+  if private.is_blocked(p_user_id) then
+    raise exception 'BEVI_NOT_FOUND' using errcode = 'P0002';
   end if;
 
   insert into public.post_notification_subscriptions (subscriber_id, target_id)
@@ -469,7 +451,7 @@ revoke execute on function public.set_post_notification(uuid, boolean) from publ
 grant execute on function public.set_post_notification(uuid, boolean) to authenticated;
 
 comment on function public.set_post_notification(uuid, boolean) is
-  'T-31: turns "push me when this person posts" on or off. On requires that the caller follows them (BEVI_VALIDATION not following) and that they exist and are not blocked either way (BEVI_NOT_FOUND). Idempotent both ways. Rate-limited.';
+  'T-31: turns "push me when this person posts" on or off. On requires that the caller follows them (BEVI_VALIDATION not following, whatever else is true of the id) and is rate-limited; off always resolves. Idempotent both ways.';
 
 -- ----------------------------------------------------------------------------
 -- 3b. get_post_notification_people
@@ -683,10 +665,13 @@ comment on function public.unregister_push_token(text) is
 -- 5. push_outbox -- the queue -- and push_tickets
 -- ============================================================================
 -- One row per push to send. `sent_at` is set when it is finished, whether it
--- was sent or skipped (`last_error` says 'skipped: <reason>' then). A failed
--- send leaves it unsent with `attempts` raised; after five it is left alone.
--- `claimed_at` is the lease: a claim older than five minutes may be taken
--- again (the Edge Function's wall time is far below that).
+-- was sent or skipped (`last_error` says 'skipped: <reason>' then).
+-- `attempts` counts CLAIMS, not failures: every lease raises it, so a sender
+-- that dies after Expo took a message but before it reported back cannot make
+-- the row go out again more than five times in all. A failed send keeps the
+-- row unsent with its error and the lease dropped. `claimed_at` is the lease:
+-- a claim older than five minutes may be taken again (the Edge Function's
+-- wall time is far below that).
 --
 -- Everything referenced cascades: a push about a post, a comment or a person
 -- that is gone has nothing to say.
@@ -712,10 +697,10 @@ create table public.push_outbox (
   )
 );
 
--- The claim: unsent rows, oldest first.
+-- The claim and the drain's "is there work" probe: unsent rows, oldest first.
 create index push_outbox_pending_idx on public.push_outbox (id) where sent_at is null;
--- Housekeeping.
-create index push_outbox_sent_idx on public.push_outbox (sent_at) where sent_at is not null;
+-- Housekeeping: everything queued more than a week ago.
+create index push_outbox_created_idx on public.push_outbox (created_at);
 -- The cascades.
 create index push_outbox_recipient_idx on public.push_outbox (recipient_id);
 create index push_outbox_actor_idx on public.push_outbox (actor_id);
@@ -737,7 +722,9 @@ create table public.push_tickets (
   checked_at timestamptz
 );
 
+-- The receipt claim and the drain's probe; and housekeeping by age.
 create index push_tickets_unchecked_idx on public.push_tickets (created_at) where checked_at is null;
+create index push_tickets_created_idx on public.push_tickets (created_at);
 
 alter table public.push_tickets enable row level security;
 revoke all on table public.push_tickets from anon, authenticated;
@@ -914,12 +901,15 @@ create trigger enqueue_push_on_post
 -- ----------------------------------------------------------------------------
 -- 6a. claim_push_batch -- the one place a push is judged
 -- ----------------------------------------------------------------------------
--- Takes up to p_limit (1..500) rows that are unsent, have attempts left (< 5)
--- and are unclaimed or hold a lease older than five minutes, oldest first,
--- `for update skip locked` so two senders take disjoint sets. Each row is then
--- judged, and a row that must not go out is FINISHED in the same statement
--- (sent_at = now(), last_error = 'skipped: <reason>'), first reason wins:
+-- Takes up to p_limit (1..500) rows that are unsent and unclaimed or hold a
+-- lease older than five minutes, oldest first, `for update skip locked` so two
+-- senders take disjoint sets (a row locked by the other is simply left for the
+-- next claim). Each row is then judged, and a row that must not go out is
+-- FINISHED in the same statement (sent_at = now(), last_error =
+-- 'skipped: <reason>'), first reason wins:
 --
+--   attempts   already claimed five times: whatever happened to those five
+--              sends (a crash after Expo took it, five failures), never a sixth
 --   expired    queued more than a day ago: late news is no news
 --   paused     the recipient paused pushes
 --   kind off   the recipient turned this kind off (posts are off by default)
@@ -931,11 +921,17 @@ create trigger enqueue_push_on_post
 --              unfollow, the unlike, the deleted comment); for a post, the
 --              subscription or the follow is gone
 --
--- The rest are leased (claimed_at = now()) and returned with everything the
--- sender needs to word them: the actor's handle, the Bev's name / brand /
+-- The rest are leased (claimed_at = now(), attempts + 1) and returned with
+-- everything the sender needs to word them: the actor's handle, the Bev's name / brand /
 -- flavor (get_feed's fields), the comment's body, every token of the
 -- recipient (most recently seen first) and `badge`, the recipient's unread
 -- displayed-row count as the app's badge shows it.
+--
+-- COST. visible_notifications_for is a definer set-returning function, so it
+-- is not inlined: it runs once per DISTINCT recipient in the batch (`vis`),
+-- and both the still-true test and the badge read that one result. The badge
+-- is get_unread_notification_count's grouping (20261126000100, section 5)
+-- over it; KEEP THE TWO IN STEP.
 
 create or replace function public.claim_push_batch(p_limit int default 100)
 returns table (
@@ -966,11 +962,37 @@ begin
     select o.id as o_id
       from public.push_outbox o
      where o.sent_at is null
-       and o.attempts < 5
        and (o.claimed_at is null or o.claimed_at < now() - interval '5 minutes')
      order by o.id
      limit v_limit
        for update of o skip locked
+  ),
+  recips as materialized (
+    select distinct o.recipient_id as r_id
+      from picked pk
+      join public.push_outbox o on o.id = pk.o_id
+  ),
+  -- Each recipient's visible inbox, computed once.
+  vis as materialized (
+    select r.r_id as v_recipient, vn.id as v_id, vn.kind as v_kind, vn.actor_id as v_actor,
+           vn.feed_event_id as v_event, vn.comment_id as v_comment, vn.read_at as v_read
+      from recips r
+      cross join lateral public.visible_notifications_for(r.r_id) vn
+  ),
+  -- The badge per recipient: displayed rows with anything unread.
+  badges as materialized (
+    select r.r_id as b_recipient,
+           (select count(*)::integer
+              from (
+                select 1
+                  from vis v
+                 where v.v_recipient = r.r_id
+                 group by v.v_kind,
+                          case when v.v_kind = 'like' then v.v_event end,
+                          case when v.v_kind = 'like' then null else v.v_id end
+                having bool_or(v.v_read is null)
+              ) unread_rows) as b_count
+      from recips r
   ),
   facts as materialized (
     select o.id            as j_id,
@@ -980,6 +1002,7 @@ begin
            o.feed_event_id as j_event,
            o.comment_id    as j_comment,
            o.created_at    as j_created,
+           o.attempts      as j_attempts,
            st.paused       as j_paused,
            case o.kind
              when 'follow'  then st.follows
@@ -1003,11 +1026,12 @@ begin
                  select 1 from public.follows f
                   where f.follower_id = o.recipient_id and f.followee_id = o.actor_id)
              else exists (
-               select 1 from public.visible_notifications_for(o.recipient_id) vn
-                where vn.kind = o.kind
-                  and vn.actor_id = o.actor_id
-                  and vn.feed_event_id is not distinct from o.feed_event_id
-                  and vn.comment_id is not distinct from o.comment_id)
+               select 1 from vis v
+                where v.v_recipient = o.recipient_id
+                  and v.v_kind = o.kind
+                  and v.v_actor = o.actor_id
+                  and v.v_event is not distinct from o.feed_event_id
+                  and v.v_comment is not distinct from o.comment_id)
            end             as j_true,
            ap.handle       as j_handle,
            b.name          as j_bev_name,
@@ -1031,6 +1055,7 @@ begin
   judged as materialized (
     select fx.*,
            case
+             when fx.j_attempts >= 5                      then 'attempts'
              when fx.j_created < now() - interval '1 day' then 'expired'
              when fx.j_paused                             then 'paused'
              when not coalesce(fx.j_kind_on, false)       then 'kind off'
@@ -1052,7 +1077,8 @@ begin
   ),
   leased as (
     update public.push_outbox o
-       set claimed_at = now()
+       set claimed_at = now(),
+           attempts = o.attempts + 1
       from judged jd
      where o.id = jd.j_id and jd.j_skip is null
     returning o.id as l_id
@@ -1060,9 +1086,10 @@ begin
   select jd.j_id, jd.j_kind, jd.j_recipient, jd.j_tokens, jd.j_actor, jd.j_handle,
          jd.j_event, jd.j_bev_name, jd.j_bev_brand, jd.j_bev_flavor,
          jd.j_comment, jd.j_comment_body,
-         public.unread_notification_count_for(jd.j_recipient)
+         coalesce(bg.b_count, 0)
     from judged jd
     join leased l on l.l_id = jd.j_id
+    left join badges bg on bg.b_recipient = jd.j_recipient
    order by jd.j_id;
 end;
 $$;
@@ -1070,9 +1097,10 @@ $$;
 -- ----------------------------------------------------------------------------
 -- 6b. finish_push_batch -- the worker's way out
 -- ----------------------------------------------------------------------------
--- No error: sent. An error: one more attempt used, the lease dropped so the
--- next drain retries it (until five). Only unsent rows are touched, so a late
--- or repeated call cannot undo a finish. Returns how many rows it changed.
+-- No error: sent. An error: the error kept and the lease dropped, so the next
+-- drain claims it again -- and that claim is what counts the attempt, so five
+-- claims in all, however each one ended. Only unsent rows are touched, so a
+-- late or repeated call cannot undo a finish. Returns how many rows it changed.
 
 create or replace function public.finish_push_batch(p_ids bigint[], p_error text default null)
 returns integer
@@ -1089,8 +1117,7 @@ begin
      where o.id = any(p_ids) and o.sent_at is null;
   else
     update public.push_outbox o
-       set attempts = o.attempts + 1,
-           last_error = left(p_error, 500),
+       set last_error = left(p_error, 500),
            claimed_at = null
      where o.id = any(p_ids) and o.sent_at is null;
   end if;
@@ -1210,9 +1237,9 @@ grant execute on function public.finish_push_receipts(text[]) to service_role;
 grant execute on function public.prune_push_tokens(text[]) to service_role;
 
 comment on function public.claim_push_batch(int) is
-  'T-31, service role only: leases up to p_limit (1..500) unsent pushes (FOR UPDATE SKIP LOCKED; a lease older than 5 minutes may be taken again; 5 attempts at most), finishes the ones that must not go out as ''skipped: <reason>'' (expired, paused, kind off, no tokens, blocked, age gate, not true) and returns the rest with the recipient''s tokens and badge.';
+  'T-31, service role only: leases up to p_limit (1..500) unsent pushes (FOR UPDATE SKIP LOCKED; a lease older than 5 minutes may be taken again; each lease counts an attempt), finishes the ones that must not go out as ''skipped: <reason>'' (attempts after five claims, expired, paused, kind off, no tokens, blocked, age gate, not true) and returns the rest with the recipient''s tokens and badge.';
 comment on function public.finish_push_batch(bigint[], text) is
-  'T-31, service role only: marks leased pushes sent (p_error null) or failed (attempts + 1, lease dropped, retried by the next drain). Touches only unsent rows.';
+  'T-31, service role only: marks leased pushes sent (p_error null) or failed (error kept, lease dropped, claimed again by the next drain; the claim counts the attempt). Touches only unsent rows.';
 comment on function public.record_push_tickets(jsonb) is
   'T-31, service role only: stores Expo push tickets [{ticket_id, token}] for the receipt check.';
 comment on function public.claim_push_receipts(int) is
@@ -1241,24 +1268,35 @@ set search_path = public, extensions
 as $$
 begin
   begin
-    -- Anything queued over a week ago, sent or not: an unsent one would only
-    -- be skipped as 'expired', and while push is not configured nothing is
-    -- ever claimed, so without this the queue would grow with every like.
+    -- Anything queued over a week ago, sent or not (sent_at >= created_at, so
+    -- this covers every finished row too): an unsent one would only be skipped
+    -- as 'expired', and while push is not configured nothing is ever claimed,
+    -- so without this the queue would grow with every like. At most 5000 rows
+    -- a minute, by index, so the first run after a long outage is not one
+    -- giant delete; the next minutes take the rest.
     delete from public.push_outbox o
-     where o.created_at < now() - interval '7 days'
-        or (o.sent_at is not null and o.sent_at < now() - interval '7 days');
+     where o.id in (
+       select x.id from public.push_outbox x
+        where x.created_at < now() - interval '7 days'
+        order by x.created_at
+        limit 5000);
     delete from public.push_tickets t
-     where t.created_at < now() - interval '2 days';
+     where t.ticket_id in (
+       select x.ticket_id from public.push_tickets x
+        where x.created_at < now() - interval '2 days'
+        order by x.created_at
+        limit 5000);
   exception when others then
     raise warning 'drain_push_outbox: housekeeping failed (%: %)', sqlstate, sqlerrm;
   end;
 
   if exists (
+       -- push_outbox_pending_idx (partial on sent_at is null).
        select 1 from public.push_outbox o
         where o.sent_at is null
-          and o.attempts < 5
           and (o.claimed_at is null or o.claimed_at < now() - interval '5 minutes'))
      or exists (
+       -- push_tickets_unchecked_idx (partial on checked_at is null).
        select 1 from public.push_tickets t
         where t.checked_at is null
           and t.created_at < now() - interval '15 minutes'

@@ -17,6 +17,7 @@ import {
   likeSentence,
   messagesFor,
   packChunks,
+  planBatch,
   planPushes,
   readTickets,
   routeFor,
@@ -140,16 +141,28 @@ Deno.test('the service-role key is not the webhook password', async () => {
   assertEquals((await h.handler(trigger('private-service-key'))).status, 401);
 });
 
-Deno.test('503 not_configured without the secret, the URL or the service key, never falling back', async () => {
-  for (const missing of ['PUSH_WEBHOOK_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']) {
-    const h = harness({ env: { [missing]: undefined } });
+Deno.test('no secret configured: 503 not_configured for a call with a bearer (never falling back), 401 without one', async () => {
+  for (const secret of [undefined, '']) {
+    const h = harness({ env: { PUSH_WEBHOOK_SECRET: secret } });
     const res = await h.handler(trigger('private-service-key'));
     assertEquals(res.status, 503);
     assertEquals(await res.json(), { error: 'not_configured' });
+    assertEquals((await h.handler(trigger(null))).status, 401);
     assertEquals(h.calls.length, 0);
   }
-  const blank = harness({ env: { PUSH_WEBHOOK_SECRET: '' } });
-  assertEquals((await blank.handler(trigger(''))).status, 503);
+});
+
+Deno.test('without the URL or the service key: 401 for a wrong bearer, so only the secret holder learns it is unconfigured', async () => {
+  for (const missing of ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']) {
+    const h = harness({ env: { [missing]: undefined } });
+    const wrong = await h.handler(trigger('wrong'));
+    assertEquals(wrong.status, 401);
+    assertEquals(await wrong.json(), { error: 'unauthorized' });
+    const right = await h.handler(trigger());
+    assertEquals(right.status, 503);
+    assertEquals(await right.json(), { error: 'not_configured' });
+    assertEquals(h.calls.length, 0);
+  }
 });
 
 Deno.test('only POST', async () => {
@@ -234,6 +247,34 @@ Deno.test('a message: no title, the body, sound, the badge, the route; one per d
     { to: tok('a2'), body: 'ana started following you', sound: 'default', badge: 4, data: { url: `/user/${B}` } },
   ]);
   assert(!('title' in messagesFor(plan!)[0]!));
+});
+
+Deno.test('planBatch: a row that throws is failed alone, its like group with it, and the rest are planned', () => {
+  const bad = row({ id: 2, kind: 'comment', comment_body: 42 as unknown as string });
+  // The group's newest row is its head, whose tokens the push uses: a bad head fails the group.
+  const badLike = row({ id: 5, kind: 'like', feed_event_id: 777, tokens: 'nope' as unknown as string[] });
+  const { plans, failedIds } = planBatch([
+    row({ id: 1, kind: 'follow' }),
+    bad,
+    row({ id: 3, kind: 'like' }),
+    row({ id: 4, kind: 'like', feed_event_id: 777, actor_id: C }),
+    badLike,
+  ]);
+  assertEquals(plans.map((p) => p.outboxIds), [[1], [3]]);
+  assertEquals(failedIds.sort((x, y) => x - y), [2, 4, 5]);
+});
+
+Deno.test('a row that cannot be worded does not take its batch down: the rest are sent, it is failed', async () => {
+  const h = harness({
+    claims: [[row({ id: 1, kind: 'follow' }), row({ id: 2, kind: 'comment', comment_body: 42 as unknown as string })]],
+  });
+  const res = await h.handler(trigger());
+  assertEquals(res.status, 200);
+  assertEquals(h.sends().map((c) => (c.body as { to: string }[]).length), [1]);
+  assertEquals(h.rpcs('finish_push_batch'), [
+    { p_ids: [1], p_error: null },
+    { p_ids: [2], p_error: 'plan_failed' },
+  ]);
 });
 
 Deno.test('a token that is not an Expo push token never reaches Expo', () => {

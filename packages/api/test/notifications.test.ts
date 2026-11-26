@@ -427,19 +427,25 @@ describe('notifications.setPostNotification', () => {
     ]);
   });
 
-  it('an id that cannot be anybody is not_found when turning on and a no-op when turning off, without a round trip', async () => {
+  it('an id that cannot be anybody is not following when turning on and a no-op when turning off, without a round trip', async () => {
     const log: RpcCall[] = [];
     const api = createNotificationsApi(fakeClient(log));
-    expect((await rejection(api.setPostNotification('nobody', true))).code).toBe('not_found');
+    expect(await rejection(api.setPostNotification('nobody', true))).toMatchObject({
+      code: 'validation',
+      detail: { field: 'not following' },
+    });
     await expect(api.setPostNotification('nobody', false)).resolves.toBeUndefined();
     expect(log).toEqual([]);
   });
 
-  it("maps 'not following' to validation, and THROWS on a backend without it", async () => {
+  it("maps 'not following' to validation with its detail, and THROWS on a backend without it", async () => {
     const notFollowing = createNotificationsApi(
       fakeClient([], () => ({ data: null, error: { ...pgError('BEVI_VALIDATION', '22023'), details: 'not following' } })),
     );
-    expect((await rejection(notFollowing.setPostNotification(PERSON_ID, true))).code).toBe('validation');
+    expect(await rejection(notFollowing.setPostNotification(PERSON_ID, true))).toMatchObject({
+      code: 'validation',
+      detail: { field: 'not following' },
+    });
     const old = createNotificationsApi(fakeClient([], () => ({ data: null, error: NO_SUCH_FUNCTION })));
     expect((await rejection(old.setPostNotification(PERSON_ID, true))).code).toBe('unknown');
   });
