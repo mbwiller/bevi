@@ -6,6 +6,7 @@ import type { FeedItem } from '@bevi/shared';
 
 import { api } from '@/api/client';
 import { keys } from '@/api/keys';
+import { DELETE_BODY, DELETE_POST, DELETE_TITLE } from '@/features/feed/OwnPostSheet';
 import { POST_GONE } from '@/features/feed/useFeedPostActions';
 import { FRIEND, ME, controls, userIdFor } from '@/testing/fakeApi';
 import ProfileScreen from '@/app/(tabs)/profile/index';
@@ -78,6 +79,31 @@ describe('Profile › Activity', () => {
     await fireEvent.press(like);
     await waitFor(() => expect(heart(post, /^Unlike/).props['aria-pressed']).toBe(true));
     await waitFor(async () => expect((await firstPost(me.id)).likedByMe).toBe(true));
+  });
+
+  it('your own post has More › Delete post: Cancel keeps it, Delete takes the post and the ranking away (TICKET-32)', async () => {
+    const me = await api.profile.getMe();
+    const post = await firstPost(me.id);
+    await open('/profile');
+    const card = await screen.findByTestId(`feed-post-${post.id}`);
+    await fireEvent.press(within(card).getByRole('button', { name: 'More actions, your post' }));
+    // Your own post's menu is Delete post, never Report or Block.
+    await fireEvent.press(await screen.findByRole('button', { name: DELETE_POST }));
+    expect(screen.queryByRole('button', { name: 'Report post' })).toBeNull();
+    expect(screen.getByText(DELETE_TITLE)).toBeTruthy();
+    expect(screen.getByText(DELETE_BODY)).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
+    expect(await screen.findByRole('button', { name: DELETE_POST })).toBeTruthy();
+    expect(screen.getByTestId(`feed-post-${post.id}`)).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('button', { name: DELETE_POST }));
+    await fireEvent.press(screen.getByRole('button', { name: `Delete ${post.bev.name}` }));
+    await waitFor(() => expect(screen.queryByTestId(`feed-post-${post.id}`)).toBeNull());
+    await waitFor(() => expect(screen.queryByTestId('sheet')).toBeNull());
+    // The server agrees: the Bev is off ME's list and the post is gone from Activity.
+    expect((await api.rankings.listMine()).items.some((r) => r.bevId === post.bev.id)).toBe(false);
+    expect((await api.feed.listUser(me.id, { limit: 20 })).items.some((p) => p.id === post.id)).toBe(false);
   });
 
   it("a followed user's profile shows posts with hearts, and liking works", async () => {

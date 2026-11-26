@@ -19,7 +19,8 @@ const NOTICE_MS = 6000;
 
 /**
  * Everything a list of FeedItems needs to behave like the Feed: like (with per-post errors), Want to
- * Try, Rank, the comments sheet's open post, and the "post is gone" notice. Shared by the Feed,
+ * Try, Rank, the comments sheet's open post, the More menu (report and block on someone else's post,
+ * delete on your own), and the "post is gone" notice. Shared by the Feed,
  * Profile › Activity and the Post screen so they agree. `linkActors: false` drops the avatar link (on that person's own profile).
  */
 export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean } = {}) {
@@ -51,6 +52,9 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
   // The post whose More menu is open (Report post, Block account); the screen renders its SafetyFlow.
   const safety = useSafetyTarget();
   const { open: openSafety } = safety;
+  // The viewer's own post whose More menu is open (Delete post); the screen renders its OwnPostSheet.
+  const [ownPost, setOwnPost] = useState<FeedItem | null>(null);
+  const closeOwnPost = useCallback(() => setOwnPost(null), []);
 
   // The post whose comments are open, and the notice when one turned out to be gone.
   const [commentsFor, setCommentsFor] = useState<string | null>(null);
@@ -91,7 +95,7 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
           likeError={likeErrors[item.id] ?? null}
           onComment={() => openComments(item.id)}
           onOpenBev={() => router.push({ pathname: '/bev/[id]', params: { id: item.bev.id } })}
-          onMore={() => openSafety({ kind: 'post', id: item.id, author: item.actor })}
+          onMore={() => (you ? setOwnPost(item) : openSafety({ kind: 'post', id: item.id, author: item.actor }))}
           onOpenPlace={openPlace(router, item.venue, you ? 'mine' : 'friends')}
           onOpenActor={
             linkActors
@@ -113,5 +117,6 @@ export function useFeedPostActions({ linkActors = true }: { linkActors?: boolean
     postGone,
     notice,
     safety: { target: safety.target, onClose: safety.close },
+    ownPost: { post: ownPost, onClose: closeOwnPost },
   };
 }

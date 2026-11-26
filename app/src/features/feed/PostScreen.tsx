@@ -15,6 +15,7 @@ import { useBack } from '@/lib/useBack';
 import { spacing, type, useTheme } from '@/theme';
 
 import { SafetyFlow } from '../safety/SafetyFlow';
+import { OwnPostSheet } from './OwnPostSheet';
 import { PostCommentsSheet } from './PostCommentsSheet';
 import { useFeedPostActions } from './useFeedPostActions';
 
@@ -37,7 +38,7 @@ export function PostScreen() {
   const back = useBack();
   const { id, comments } = useLocalSearchParams<{ id: string; comments?: string }>();
   const query = usePost(id);
-  const { renderItem, commentsFor, openComments, closeComments, postGone, notice, safety } = useFeedPostActions();
+  const { renderItem, commentsFor, openComments, closeComments, postGone, notice, safety, ownPost } = useFeedPostActions();
   const arrival = useArrival(query.isPending);
   const post = query.data;
 
@@ -78,6 +79,8 @@ export function PostScreen() {
       <PostCommentsSheet eventId={post && !gone ? commentsFor : null} onClose={closeComments} onGone={postGone} />
       {/* Blocking the author takes the post with them: back to where it was opened from. */}
       <SafetyFlow {...safety} onBlocked={back} />
+      {/* Deleting your own post leaves nothing to show: back, once its sheet has closed. */}
+      <OwnPostSheet {...ownPost} onDeleted={back} />
     </SafeAreaView>
   );
 }

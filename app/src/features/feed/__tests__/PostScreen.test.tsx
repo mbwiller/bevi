@@ -119,6 +119,19 @@ it('?comments=1 opens its comments once it has loaded, and not again after they 
   expect(await screen.findByTestId('sheet')).toBeTruthy();
 });
 
+it('deleting your own post from its screen goes back once the sheet has closed (TICKET-32)', async () => {
+  const me = await api.profile.getMe();
+  const own = (await api.feed.listUser(me.id, { limit: 20 })).items[0]!;
+  const { path } = await start(`/post/${own.id}`);
+  const ownCard = await screen.findByTestId(`feed-post-${own.id}`);
+  await fireEvent.press(within(ownCard).getByRole('button', { name: 'More actions, your post' }));
+  await fireEvent.press(await screen.findByRole('button', { name: 'Delete post' }));
+  await fireEvent.press(screen.getByRole('button', { name: `Delete ${own.bev.name}` }));
+  // A deep link has no history: Back falls back to '/'.
+  await waitFor(() => expect(path()).toBe('/'));
+  await expect(api.feed.getPost(own.id)).rejects.toMatchObject({ code: 'not_found' });
+});
+
 it('not_found: says the post is gone, and Back still works', async () => {
   await start('/post/no-such-post');
   expect(await screen.findByText(POST_GONE_TITLE)).toBeTruthy();
