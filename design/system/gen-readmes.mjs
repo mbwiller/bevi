@@ -45,7 +45,15 @@ const R = {
 
 - Provide: \`name\`, \`src\`, \`onChange\` (opens the photo picker: on the web the file input, which on an iPhone offers the camera or the library), \`onRemove\`, \`busy\` (a spinner over the circle while the picture uploads; both buttons disabled), \`error\` (a \`scoreLow\` caption: "Couldn't upload your photo. Try another one.").
 - A chosen photo is saved as soon as it uploads, with no Save step: the circle shows the new picture at once and it appears everywhere the person's Avatar does. Removing goes back to initials.
-- Photos are resized to 512pt on the longest edge and re-encoded as JPEG before upload (EXIF dropped), the same path as Bev photos at 1600pt.`,
+- A picked photo goes through the PhotoCropper first, so the person chooses what the circle shows. What is uploaded is that square, resized to 512pt and re-encoded as JPEG (EXIF dropped), the same path as Bev photos at 1600pt.`,
+  PhotoCropper: `The step between picking a profile photo and uploading it: the whole screen, "Move and scale" over the photo, with the circle the Avatar will show cut out of a \`photoScrim\`, then "Use photo" and "Cancel".
+
+- Provide: \`src\` and the photo's \`width\` and \`height\` in pixels (upright, as decoded), \`onDone\` (gets the framed square in the photo's own pixels: \`x\`, \`y\`, \`size\`), \`onCancel\`.
+- It opens with the photo just filling the circle, centred. Drag to move it, pinch to zoom, up to 4 times (\`CROP_MAX_ZOOM\`); in this web reference the wheel zooms. A double tap zooms to 2 times, and back to the start. The photo always covers the circle, so there is never an empty edge inside it: it stops at its own edges and cannot be zoomed out past "fills the circle".
+- The stage is a full-width square on \`input\`; the circle is inset by the 16pt gutter and ringed 2pt in \`onDeep\`. Outside the circle the photo stays visible under the scrim, so it is clear what is being left out.
+- With VoiceOver the photo is one adjustable element: swipe up and down to zoom. Moving it needs the drag.
+- One \`primary\` Button, "Use photo", over a \`ghost\` "Cancel". Cancel uploads nothing and leaves the current photo as it was. After "Use photo" this step closes and the AvatarPicker shows its uploading spinner.
+- It comes up over the Edit profile sheet and over the onboarding profile step. Don't use it for Bev photos: a Bev's tile is not a crop of a photo.`,
   AvatarStack: `Overlapping avatars for "Friends who've had it" on Bev detail and "Bev'd it too" on a FeedPost, with a "+N" chip past \`max\`.
 
 - Provide: \`people\` ({ name, src? }), \`size\` (32 on Bev detail, 24 on a post), \`max\` (4; a post shows 2).

@@ -14,6 +14,7 @@ import { TextField } from '@/components/TextField';
 import { FormError } from '@/features/auth/AuthScreen';
 import { focusField } from '@/features/auth/focusField';
 import { errorField, formErrorMessage } from '@/features/auth/formError';
+import { AvatarCropStep } from '@/features/profile/AvatarCropStep';
 import { useAvatarUpload } from '@/features/profile/useAvatarUpload';
 import { birthdateProblem, deviceTimezone, isUnder21, maskBirthdate } from '@/features/onboarding/birthdate';
 import { FORM_SCROLL } from '@/lib/formScroll';
@@ -145,6 +146,7 @@ function ProfileForm({ me }: { me: Profile }) {
           Continue
         </Button>
       </View>
+      <AvatarCropStep crop={avatar.crop} />
     </ScrollView>
   );
 }

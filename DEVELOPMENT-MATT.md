@@ -309,7 +309,7 @@ Common to every screen unless noted: loading = skeleton of the final layout; err
 
 ### 6.2 Onboarding: profile + age gate (`onboarding/profile.tsx`)
 
-- Contents: display name (prefilled from the username), birthdate (date picker) with the line "Set once. Used only to show 21+ categories. Can't be changed later without contacting us."; `Avatar 100` preview with initials.
+- Contents: display name (prefilled from the username), birthdate (date picker) with the line "Set once. Used only to show 21+ categories. Can't be changed later without contacting us."; `Avatar 100` preview with initials, in an `AvatarPicker`: a picked photo opens the `PhotoCropper` ("Move and scale", `features/profile/AvatarCropStep.tsx`) to frame it under the circle, and only that square, resized to 512px, uploads.
 - Data: `profile.updateMe({ displayName, timezone })`, `profile.setBirthDate(date)` (one call, one time; the server rejects a second call, only an admin can change it, Arjun's rule).
 - States: birthdate missing blocks Continue; under-21 is allowed and just sets `profile.canSeeAlcohol = false`.
 
@@ -474,7 +474,7 @@ No screen of its own: people are searched in the Search tab's one bar and shown 
 
 ### 6.19 Small screens and sheets
 
-Edit profile (name, handle, avatar initials preview); Re-rank sheet (choose: change bucket → full placement, or keep bucket → placement within bucket; both end in `rerankBev`); Remove-ranking confirm; Category picker sheet; Filter sheet (bucket, price, category); Report Bev sheet (the Duplicate reason asks which Bev and sends `duplicateOfId`, M-20); Full-screen image viewer (a transparent modal over the page: it grows out of the tapped picture, and a swipe down or Close sends it back; `features/bev/ImageViewer.tsx`; a profile photo, tapped in either profile's hero, opens as a large circle via `?shape=circle`, and initials are not tappable); Not-found screen; Force-update/maintenance screen driven by `meta.getAppConfig()` (minimum version, maintenance flag).
+Edit profile (name, handle, avatar initials preview; a new photo is framed in the `PhotoCropper`, "Move and scale", over the sheet before its square uploads); Re-rank sheet (choose: change bucket → full placement, or keep bucket → placement within bucket; both end in `rerankBev`); Remove-ranking confirm; Category picker sheet; Filter sheet (bucket, price, category); Report Bev sheet (the Duplicate reason asks which Bev and sends `duplicateOfId`, M-20); Full-screen image viewer (a transparent modal over the page: it grows out of the tapped picture, and a swipe down or Close sends it back; `features/bev/ImageViewer.tsx`; a profile photo, tapped in either profile's hero, opens as a large circle via `?shape=circle`, and initials are not tappable); Not-found screen; Force-update/maintenance screen driven by `meta.getAppConfig()` (minimum version, maintenance flag).
 
 ### 6.20 Taste Profile tab and goal card (ref 10, 02) — Phase 3
 
