@@ -930,3 +930,128 @@ describe('venues.searchMore and addPlace (BEV-22)', () => {
     await expect(api.venues.addPlace('ext-nowhere')).rejects.toMatchObject({ code: 'not_found' });
   });
 });
+
+// T-31. The conformance suite covers the inbox's behaviour on fresh accounts; these pin the fake's
+// own seeded inbox for ME and the parts only the fake has (fixture rows, controls, failNext).
+describe('notifications (T-31)', () => {
+  const id = (handle: string) => userIdFor(handle);
+
+  async function myPosts(api: FakeApi, meId: string) {
+    return (await api.feed.listUser(meId, { limit: 50 })).items;
+  }
+
+  it("seeds ME's inbox: two unread likes as one row, an unread comment and follow, three read ones", async () => {
+    const api = make();
+    const me = await signInMe(api);
+    const [newest, second] = await myPosts(api, me.userId);
+    const { items, nextCursor } = await api.notifications.list();
+    expect(nextCursor).toBeNull();
+    expect(items.map((n) => [n.kind, n.unread, n.actors.map((p) => p.handle)])).toEqual([
+      ['like', true, [FRIEND.handle, 'friend_b']],
+      ['comment', true, [FRIEND.handle]],
+      ['follow', true, ['friend_e']],
+      ['comment', false, ['friend_b']],
+      ['like', false, ['friend_d']],
+      ['follow', false, ['friend_d']],
+    ]);
+    expect(items[0]).toMatchObject({ actorCount: 2, postId: newest!.id, bev: { id: newest!.bev.id }, comment: null });
+    expect(items[1]).toMatchObject({ postId: second!.id, comment: { body: expect.any(String) } });
+    // friend_e follows ME and ME does not follow back; friend_d is followed both ways.
+    expect(items[2]!.actors[0]).toMatchObject({ id: id('friend_e'), isFollowing: false });
+    expect(items[5]!.actors[0]).toMatchObject({ id: id('friend_d'), isFollowing: true });
+    expect(items.slice(3).every((n) => Date.parse(n.createdAt) < FIXED_NOW.getTime() - 7 * 24 * 3600 * 1000)).toBe(true);
+    expect(await api.notifications.unreadCount()).toBe(3);
+    // The fixtures add no likes, comments or follows of their own: the post still reads as it did.
+    expect((await api.feed.getPost(newest!.id)).likeCount).toBe(0);
+  });
+
+  it('pages by keyset, each row once, and markRead stops at the id it is given', async () => {
+    const api = make();
+    await signInMe(api);
+    const all = (await api.notifications.list()).items;
+    const page1 = await api.notifications.list({ limit: 4 });
+    const page2 = await api.notifications.list({ limit: 4, cursor: page1.nextCursor! });
+    expect(page2.nextCursor).toBeNull();
+    expect([...page1.items, ...page2.items].map((n) => n.id)).toEqual(all.map((n) => n.id));
+
+    await api.notifications.markRead(all[2]!.id);
+    expect(await api.notifications.unreadCount()).toBe(2);
+    await api.notifications.markRead();
+    expect(await api.notifications.unreadCount()).toBe(0);
+    await expect(api.notifications.markRead('feed-1')).rejects.toMatchObject({ code: 'validation', detail: { field: 'upToId' } });
+  });
+
+  it("a friend's like and comment arrive, an unlike hides the like, and your own like notifies nobody", async () => {
+    const api = make();
+    const me = await signInMe(api);
+    const third = (await myPosts(api, me.userId))[2]!;
+    await api.feed.like(third.id);
+    expect(await api.notifications.unreadCount()).toBe(3);
+
+    api.signInAs(FRIEND.handle);
+    await api.feed.like(third.id);
+    await api.comments.add(third.id, 'from friend a');
+    api.signInAs(ME.handle);
+    const [comment, like] = (await api.notifications.list()).items;
+    expect(comment).toMatchObject({ kind: 'comment', postId: third.id, comment: { body: 'from friend a' }, unread: true });
+    expect(like).toMatchObject({ kind: 'like', postId: third.id, actorCount: 1, unread: true });
+    expect(await api.notifications.unreadCount()).toBe(5);
+
+    api.signInAs(FRIEND.handle);
+    await api.feed.unlike(third.id);
+    await api.feed.like(third.id);
+    await api.feed.unlike(third.id);
+    api.signInAs(ME.handle);
+    expect((await api.notifications.list()).items.filter((n) => n.postId === third.id).map((n) => n.kind)).toEqual(['comment']);
+    expect(await api.notifications.unreadCount()).toBe(4);
+  });
+
+  it('a block hides even a fixture row; deleting an account takes its rows', async () => {
+    const api = make();
+    await signInMe(api);
+    await api.blocks.block(id('friend_e'));
+    expect((await api.notifications.list()).items.some((n) => n.actors.some((p) => p.id === id('friend_e')))).toBe(false);
+    expect(await api.notifications.unreadCount()).toBe(2);
+
+    api.signInAs(FRIEND.handle);
+    await api.deleteAccount();
+    await signInMe(api);
+    const items = (await api.notifications.list()).items;
+    expect(items.some((n) => n.actors.some((p) => p.id === id(FRIEND.handle)))).toBe(false);
+    expect(items[0]).toMatchObject({ kind: 'like', actorCount: 1 });
+  });
+
+  it('controls: clearNotifications empties the inbox until resetToFixtures; failNext reaches the methods', async () => {
+    const api = make();
+    await signInMe(api);
+    api.clearNotifications();
+    expect(await api.notifications.list()).toEqual({ items: [], nextCursor: null });
+    expect(await api.notifications.unreadCount()).toBe(0);
+    api.resetToFixtures();
+    await signInMe(api);
+    expect(await api.notifications.unreadCount()).toBe(3);
+
+    api.failNext('network', 'notifications.list');
+    await expect(api.notifications.list()).rejects.toMatchObject({ code: 'network' });
+    api.failNext('network', 'notifications.unreadCount');
+    await expect(api.notifications.unreadCount()).rejects.toMatchObject({ code: 'network' });
+    api.failNext('network', 'feed.getPost');
+    await expect(api.feed.getPost('feed-1')).rejects.toMatchObject({ code: 'network' });
+    await api.signOut();
+    await expect(api.notifications.list()).rejects.toMatchObject({ code: 'unauthorized' });
+  });
+
+  it("feed.getPost: own and followed posts as the feed shows them; a stranger's or a missing one is not_found", async () => {
+    const api = make();
+    await signInMe(api);
+    const feed = (await api.feed.getFeed({ limit: 100 })).items;
+    const friendPost = feed.find((i) => i.actor.id === id(FRIEND.handle))!;
+    expect(await api.feed.getPost(friendPost.id)).toEqual(friendPost);
+
+    api.signInAs('friend_e');
+    const strangerPost = (await api.feed.listUser(id('friend_e'), { limit: 1 })).items[0]!;
+    await signInMe(api);
+    await expect(api.feed.getPost(strangerPost.id)).rejects.toMatchObject({ code: 'not_found' });
+    await expect(api.feed.getPost('feed-does-not-exist')).rejects.toMatchObject({ code: 'not_found' });
+  });
+});
