@@ -11,6 +11,7 @@ import { BANDS, MIN_N_USER, MIN_RATERS, compareCodePoints, normaliseBrand } from
 import {
   ApiError,
   BUCKET_ORDER,
+  MAX_CATEGORY_PICKS,
   NYC_BOUNDS,
   PLACE_TYPES,
   REPORT_NOTE_MAX,
@@ -150,6 +151,8 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       await expectCode(api.categories.tree(), 'unauthorized');
       await expectCode(api.stats.getCategoryProgress(), 'unauthorized');
       await expectCode(api.stats.getTasteProfile('anyone'), 'unauthorized');
+      await expectCode(api.profile.getCategoryPicks(), 'unauthorized');
+      await expectCode(api.profile.setCategoryPicks([]), 'unauthorized');
       await expectCode(api.deleteAccount(), 'unauthorized');
     });
 
@@ -297,6 +300,48 @@ export function runConformance(makeApi: () => BeviApi | Promise<BeviApi>, option
       const page = await api.profile.searchUsers({ q: `@${a.handle}` });
       expect(page.items.map((u) => u.id)).toContain(a.userId);
       expect(page).toHaveProperty('nextCursor');
+    });
+
+    it('category picks: [] until set, saved favourite first, replaced whole, cleared with []', async () => {
+      await newUser();
+      expect(await api.profile.getCategoryPicks()).toEqual([]);
+      expect(await api.profile.setCategoryPicks(['coffee', 'soda', 'tea'])).toEqual(['coffee', 'soda', 'tea']);
+      expect(await api.profile.getCategoryPicks()).toEqual(['coffee', 'soda', 'tea']);
+      expect(await api.profile.setCategoryPicks(['tea'])).toEqual(['tea']);
+      expect(await api.profile.getCategoryPicks()).toEqual(['tea']);
+      expect(await api.profile.setCategoryPicks([])).toEqual([]);
+      expect(await api.profile.getCategoryPicks()).toEqual([]);
+    });
+
+    it('category picks: too many, a repeat or an id that is not a top-level category is validation on categoryIds, and saves nothing', async () => {
+      await newUser();
+      await api.profile.setCategoryPicks(['water']);
+      const tooMany = (['soda', 'juice', 'tea', 'coffee', 'boba'] as const).slice(0, MAX_CATEGORY_PICKS + 1);
+      expect((await expectCode(api.profile.setCategoryPicks([...tooMany]), 'validation')).detail).toMatchObject({ field: 'categoryIds' });
+      expect((await expectCode(api.profile.setCategoryPicks(['soda', 'soda']), 'validation')).detail).toMatchObject({ field: 'categoryIds' });
+      // Not a CategoryId at all: an id from outside the 15 roots, as a stale or buggy client might send.
+      expect((await expectCode(api.profile.setCategoryPicks(['no_such_category' as never]), 'validation')).detail).toMatchObject({
+        field: 'categoryIds',
+      });
+      expect(await api.profile.getCategoryPicks()).toEqual(['water']);
+    });
+
+    it('category picks: an alcoholic category is age_restricted under 21 and accepted at 21+', async () => {
+      await newUser({ birthdate: MINOR_BIRTHDATE(new Date()) });
+      await expectCode(api.profile.setCategoryPicks(['beer']), 'age_restricted');
+      await expectCode(api.profile.setCategoryPicks(['soda', 'wine']), 'age_restricted');
+      expect(await api.profile.getCategoryPicks()).toEqual([]);
+      await newUser({ birthdate: ADULT_BIRTHDATE });
+      expect(await api.profile.setCategoryPicks(['beer', 'water'])).toEqual(['beer', 'water']);
+    });
+
+    it("category picks are private: another user reads only their own", async () => {
+      const owner = await newUser();
+      await api.profile.setCategoryPicks(['juice', 'boba']);
+      await newUser();
+      expect(await api.profile.getCategoryPicks()).toEqual([]);
+      await signInAs(owner);
+      expect(await api.profile.getCategoryPicks()).toEqual(['juice', 'boba']);
     });
   });
 

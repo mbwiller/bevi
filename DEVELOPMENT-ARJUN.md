@@ -354,6 +354,21 @@ create table public.want_to_try (
 );
 ```
 
+#### `user_category_picks` (DELIVERABLE-44, 20261126000200)
+
+```sql
+create table public.user_category_picks (
+  user_id     uuid        not null references public.profiles(id) on delete cascade,
+  rank        smallint    not null check (rank between 1 and 3),   -- 1 = favourite
+  category_id text        not null references public.categories(id), -- a root (parent_id is null)
+  created_at  timestamptz not null default now(),
+  primary key (user_id, rank),
+  unique (user_id, category_id)
+);
+```
+
+The go-to categories a user picks in onboarding, at most `MAX_CATEGORY_PICKS` (3). Private to the owner: a pick of `beer` would tell a reader the person is 21+. Written only by `set_category_picks()` (§5.6), read directly through RLS by `profile.getCategoryPicks()`.
+
 #### `user_stats` and `user_category_stats`
 
 ```sql
@@ -551,6 +566,7 @@ $$;
 | `rankings` | all (profile feeds are public inside the app) with the same alcohol filter via join | RPC only | RPC only | RPC only | public (age-gated) |
 | `comparisons` | own | RPC only | — | — | private |
 | `want_to_try` | own | own | — | own | private (count is public via `user_stats`) |
+| `user_category_picks` | own | RPC only | RPC only | RPC only | private (no admin read either) |
 | `user_stats`, `user_category_stats`, `streaks` | all | — | — | — | public |
 | `featured_bevs` | all where `now() between starts_at and coalesce(ends_at,'infinity')` | admin | admin | admin | public |
 | `feed_events` | `actor_id = auth.uid()` or actor in my follows | RPC only | — | — | friends-visible |
@@ -611,7 +627,7 @@ begin
   select array_agg(distinct bev_id) into v_bevs from public.rankings where user_id = v_uid;
   delete from storage.objects where bucket_id in ('avatars','raw-uploads') and owner_id = v_uid::text;
   -- bevs they created stay in the catalog with created_by = null (FK on delete set null); say so in the privacy policy
-  delete from auth.users where id = v_uid;      -- cascades: profiles → rankings, comparisons, follows, want_to_try, events, stats
+  delete from auth.users where id = v_uid;      -- cascades: profiles → rankings, comparisons, follows, want_to_try, user_category_picks, events, stats
   perform public.refresh_bev_stats(v_bevs);
   perform public.refresh_global_stats();
 end $$;
@@ -839,6 +855,7 @@ User search (`search_users(q)`): trigram on `handle` and `display_name`, limit 2
 | `list_rankings(p_user_id, p_bucket, p_cursor, p_limit)` | `rankings` ⋈ `bev_cards`, ordered `bucket desc, position` | Bev'd list; the app loads one bucket fully before a placement session (binary search needs the ordered list) |
 | `list_want_to_try(p_cursor, p_limit)` | own `want_to_try` ⋈ `bev_cards` ⋈ source profile | |
 | `add_want_to_try(p_bev_id, p_source_ranking_id)` / `remove_want_to_try(p_bev_id)` | | Writes `feed_events('want_to_try')`, refreshes `user_stats.want_count` |
+| `set_category_picks(p_category_ids text[])` | `table (category_id text, rank smallint)`, rank order | DELIVERABLE-44. Replaces the caller's go-to categories (0–3 roots, favourite first; `'{}'` clears) under `pg_advisory_xact_lock('picks:' \|\| uid)`. `BEVI_VALIDATION` (detail `categoryIds`) for null, > 3, a null entry, a repeat, an unknown id or a leaf; `BEVI_AGE_RESTRICTED` for an alcoholic root under 21. No rate limit. Reads need no RPC: `user_category_picks` is selected directly, own rows only |
 | `follow_user(p_user_id)` / `unfollow_user(p_user_id)` | | Updates both users' counts in `user_stats`; `feed_events('followed')` |
 | `get_profile(p_handle)` | profile ⋈ `user_stats` ⋈ `streaks` + `is_following` + `follows_me` | |
 | `get_bev(p_bev_id)` | `bev_cards` + my ranking (if any) + my prediction + friends who ranked it (profiles I follow, with their score) + `in_want_to_try` | One call for the detail page |

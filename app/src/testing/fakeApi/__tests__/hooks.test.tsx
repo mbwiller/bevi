@@ -9,10 +9,12 @@ import {
   flattenPages,
   useAuthListener,
   useBucket,
+  useCategoryPicks,
   useFeed,
   useFollow,
   useMe,
   useSetBirthDate,
+  useSetCategoryPicks,
   useSignIn,
   useSubmitRanking,
   useUser,
@@ -123,5 +125,26 @@ it('useSetBirthDate refreshes the age-filtered feed, Activity and Explore', asyn
   for (const queryKey of [keys.feed(), keys.feedUser(me.id), keys.explore()]) {
     expect(client.getQueryState(queryKey)?.isInvalidated).toBe(true);
   }
+  jest.restoreAllMocks();
+});
+
+it('useSetCategoryPicks writes the saved picks into the useCategoryPicks cache', async () => {
+  await api.signIn({ username: 'tester', password: 'tester-pass-1' });
+  const { client, wrapper } = setup();
+  const picks = await renderHook(() => useCategoryPicks(), { wrapper });
+  await waitFor(() => expect(picks.result.current.data).toEqual([]));
+
+  const read = jest.spyOn(api.profile, 'getCategoryPicks');
+  const set = await renderHook(() => useSetCategoryPicks(), { wrapper });
+  await act(() => set.result.current.mutateAsync(['tea', 'coffee']).then(() => undefined));
+  expect(client.getQueryData(keys.categoryPicks())).toEqual(['tea', 'coffee']);
+  await waitFor(() => expect(picks.result.current.data).toEqual(['tea', 'coffee']));
+  // From the mutation's answer, not a refetch.
+  expect(read).not.toHaveBeenCalled();
+
+  // A refusal leaves the cache as it was.
+  await act(() => set.result.current.mutateAsync(['beer', 'beer']).catch(() => undefined));
+  await waitFor(() => expect(set.result.current.error).toMatchObject({ code: 'validation' }));
+  expect(client.getQueryData(keys.categoryPicks())).toEqual(['tea', 'coffee']);
   jest.restoreAllMocks();
 });

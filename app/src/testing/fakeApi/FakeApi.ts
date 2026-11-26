@@ -50,6 +50,7 @@ import {
   hoursKnown,
   openAt,
   HANDLE_PATTERN,
+  MAX_CATEGORY_PICKS,
   REPORT_NOTE_MAX,
   REPORT_REASONS,
   RESERVED_HANDLES,
@@ -1088,6 +1089,8 @@ export class FakeApi implements BeviApi {
     const events = new Set(db.feed.map((e) => e.id));
     db.likes = (db.likes ?? []).filter((l) => l.userId !== userId && events.has(l.feedEventId));
     db.comments = (db.comments ?? []).filter((c) => c.userId !== userId && events.has(c.feedEventId));
+    // user_category_picks cascades from profiles; and a first-run user (emptyUser) has none yet.
+    if (db.categoryPicks) delete db.categoryPicks[userId];
   }
 
   /** The feed event `id` if `viewer` can see it (own or a followee's post, Bev age-visible), else not_found. */
@@ -1313,6 +1316,37 @@ export class FakeApi implements BeviApi {
           .map((u) => this.toRow(u, me));
         return paginate(rows, params, 25);
       }),
+
+    // DELIVERABLE-44: `user_category_picks` is read through an own-rows policy, so only the
+    // caller's own ever comes back.
+    getCategoryPicks: () =>
+      this.call('profile.getCategoryPicks', (): CategoryId[] => {
+        // Outside the `?.[]`, which would skip the session check while nobody has picks yet.
+        const me = this.requireUser();
+        return [...(this.db.categoryPicks?.[me.id] ?? [])];
+      }),
+
+    // `set_category_picks`' rules, in its order: every validation failure is the one field, and
+    // only a list that passes them all is age-checked. Nothing is saved when it throws.
+    setCategoryPicks: (categoryIds: CategoryId[]) =>
+      this.call(
+        'profile.setCategoryPicks',
+        (): CategoryId[] => {
+          const me = this.requireUser();
+          const bad = (message: string) => invalid('categoryIds', message);
+          if (!Array.isArray(categoryIds)) bad('Choose up to three categories');
+          if (categoryIds.length > MAX_CATEGORY_PICKS) bad(`Choose up to ${MAX_CATEGORY_PICKS} categories`);
+          if (categoryIds.some((id) => id === null || id === undefined)) bad('Choose a category');
+          if (new Set(categoryIds).size !== categoryIds.length) bad('Choose each category once');
+          // CATEGORIES is the 15 roots: an unknown id and a leaf both fail here.
+          if (!categoryIds.every((id) => CATEGORIES.some((c) => c.id === id))) bad('Choose a category');
+          if (categoryIds.some((id) => ALCOHOLIC.has(id)) && !this.canSeeAlcohol(me)) fail('age_restricted', 'Not available');
+          const picks = [...categoryIds];
+          this.db.categoryPicks = { ...this.db.categoryPicks, [me.id]: picks };
+          return [...picks];
+        },
+        true,
+      ),
   };
 
   stats: StatsApi = {
