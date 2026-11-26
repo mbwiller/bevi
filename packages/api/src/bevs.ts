@@ -22,6 +22,7 @@ import {
   mapBevLeaf,
   mapBevSimilarity,
   mapBevSummary,
+  mapNutrition,
   mapProfile,
   type GeneratedBevIconRow,
   type BevLeafRow,
@@ -100,6 +101,24 @@ interface GetBevRpcRow {
   icon_path?: string | null;
 }
 
+/**
+ * A Bev's nutrition snapshot, of either source, as stored. Through
+ * get_bev_nutrition (20261130000100) because the table's select policy shows
+ * Open Food Facts rows only: that is the shape binaries built before 3.10.0
+ * read, and a label read's null `sourceUrl` crashes their NutritionCard. A
+ * backend without the function answers PGRST202, and its table, which can
+ * then hold nothing but Open Food Facts rows, is read instead; a backend with
+ * no table at all still renders the Bev.
+ */
+async function readNutrition(client: SupabaseClient, bevId: string): Promise<unknown> {
+  const viaRpc = await client.rpc('get_bev_nutrition', { p_bev_id: bevId });
+  if (!viaRpc.error) return viaRpc.data;
+  if (viaRpc.error.code !== 'PGRST202') throw mapError(viaRpc.error);
+  const { data, error } = await client.from('bev_nutrition').select('nutrition').eq('bev_id', bevId).maybeSingle();
+  if (error && !['PGRST205', '42P01'].includes(error.code)) throw mapError(error);
+  return (data as { nutrition?: unknown } | null)?.nutrition ?? null;
+}
+
 export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache): BevsApi {
   async function search(params: { q: string; categoryId?: CategoryId; limit?: number; cursor?: string }): Promise<Page<BevSummary>> {
     await requireUserId(client);
@@ -134,7 +153,7 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
     // Read straight from the table rather than widening get_bev: the profile
     // has a select policy for authenticated, and changing an RPC's `returns
     // table` means dropping and recreating it.
-    const [rankingRes, wantRes, followeeIds, profileRes, nutritionRes] = await Promise.all([
+    const [rankingRes, wantRes, followeeIds, profileRes, nutritionRaw] = await Promise.all([
       client.from('rankings').select('bucket, position, score, note').eq('user_id', uid).eq('bev_id', bevId).maybeSingle(),
       client.from('want_to_try').select('user_id').eq('user_id', uid).eq('bev_id', bevId).maybeSingle(),
       fetchFollowIds(client, 'follows', 'follower_id', uid),
@@ -143,13 +162,11 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
         .select('base, carbonated, caffeine, sweetness, dairy, alcohol, serve, source')
         .eq('bev_id', bevId)
         .maybeSingle(),
-      client.from('bev_nutrition').select('nutrition').eq('bev_id', bevId).maybeSingle(),
+      readNutrition(client, bevId),
     ]);
     if (rankingRes.error) throw mapError(rankingRes.error);
     if (wantRes.error) throw mapError(wantRes.error);
     if (profileRes.error) throw mapError(profileRes.error);
-    // A migration-first rollout is required for writes. Older stacks still render Bev detail.
-    if (nutritionRes.error && !['PGRST205', '42P01'].includes(nutritionRes.error.code)) throw mapError(nutritionRes.error);
 
     let myRanking: MyRankingRow | null = null;
     if (rankingRes.data) {
@@ -211,13 +228,16 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       created_by: row.created_by_id && row.created_by_handle ? { id: row.created_by_id, handle: row.created_by_handle } : null,
       is_starter: row.is_starter,
     };
+    // `mapNutrition` is what tolerates a snapshot stored before contract
+    // 3.10.0 added `source` (mappers.ts); `readNutrition` is what tolerates a
+    // backend with no get_bev_nutrition, or no `bev_nutrition` at all.
     return { ...mapBev(client, bevRow, {
       myRanking,
       inWantToTry: wantRes.data !== null,
       friends,
       flavorProfile: profileRes.data as FlavorProfileRow | null,
       prediction: myRanking ? null : await prediction,
-    }), nutrition: (nutritionRes.data?.nutrition as import('@bevi/shared').NutritionPreview | undefined) ?? null };
+    }), nutrition: mapNutrition(nutritionRaw) };
   }
 
   // The contract's `Bev.prediction`: null when the caller ranked the Bev or has
@@ -276,20 +296,38 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       p_photo_asset_id: input.photoAssetId ?? null,
       p_label_asset_id: input.labelAssetId ?? null,
     };
-    // Until create_bev_with_nutrition_v2 (BEV-13) exists, only an Open Food
-    // Facts snapshot can be saved, and v1 refuses any key outside its ten, so
-    // `source` (contract 3.10.0) stays out of what it is sent.
-    const { source: _source, ...snapshot } = input.nutrition ?? {};
-    const saved = input.nutrition && input.nutrition.source !== 'label-ocr' ? snapshot : null;
-    const rpcName = saved ? 'create_bev_with_nutrition' : 'create_bev';
-    let result = await client.rpc(rpcName, {
-      ...args,
-      ...(saved ? { p_nutrition: saved } : {}),
-    }).single();
-    // The migration is applied manually after the backend deploy. If it is not
-    // there yet, preserve Bev creation and omit only the optional snapshot.
-    if (saved && result.error?.code === 'PGRST202') {
-      result = await client.rpc('create_bev', args).single();
+    // Both nutrition migrations are applied by hand after the backend deploy,
+    // so `create` steps down one rung at a time on PGRST202 ("no such
+    // function") rather than assuming either is there:
+    //
+    //   create_bev_with_nutrition_v2  -- takes both sources.
+    //   -> create_bev_with_nutrition  -- an `openfoodfacts` snapshot only. v1
+    //      requires a barcode, so handing it a `label-ocr` snapshot would not
+    //      degrade, it would fail the whole creation.
+    //   -> create_bev                 -- the Bev without its snapshot. The app
+    //      already copes with this by telling the person the nutrition was not
+    //      saved, which is why dropping it beats failing the creation.
+    // v1 predates `source` and rejects any key outside its own ten
+    // (20261115214237), so the rung that exists to degrade gracefully would
+    // instead raise BEVI_VALIDATION -- not PGRST202, so the ladder would stop
+    // and the whole creation would fail. Hand v1 the snapshot it understands.
+    const v1Snapshot = input.nutrition && (({ source: _unused, ...rest }) => rest)(input.nutrition);
+    const callRpc = (name: string) =>
+      client.rpc(
+        name,
+        name === 'create_bev'
+          ? args
+          : { ...args, p_nutrition: name === 'create_bev_with_nutrition' ? v1Snapshot : input.nutrition },
+      ).single();
+    const fallbacks = !input.nutrition
+      ? []
+      : (input.nutrition.source ?? 'openfoodfacts') === 'openfoodfacts'
+        ? ['create_bev_with_nutrition', 'create_bev']
+        : ['create_bev'];
+    let result = await callRpc(input.nutrition ? 'create_bev_with_nutrition_v2' : 'create_bev');
+    for (const name of fallbacks) {
+      if (result.error?.code !== 'PGRST202') break;
+      result = await callRpc(name);
     }
     const { data, error } = result;
     if (error) throw mapError(error);

@@ -35,6 +35,7 @@ import type {
   Notification,
   NotificationKind,
   NotificationSettings,
+  NutritionPreview,
   PeriodWinner,
   PhotoStatus,
   PostNotificationPerson,
@@ -503,6 +504,38 @@ export function mapFlavorProfile(row: FlavorProfileRow): FlavorProfile {
     alcohol: row.alcohol,
     serve: row.serve as FlavorProfile['serve'],
     source: row.source as FlavorProfile['source'],
+  };
+}
+
+/**
+ * A nutrition snapshot as it comes back out of `bev_nutrition.nutrition`, or
+ * off the label reader, normalised to what contract 3.10.0 promises.
+ *
+ * `source` is the reason this mapper exists. Every snapshot written before
+ * 3.10.0 was an Open Food Facts barcode match and the column holds the jsonb
+ * exactly as it was stored, with no `source` key at all -- so a Bev created
+ * last week would otherwise hand the app a `NutritionPreview` whose `source`
+ * is `undefined`, which nothing in the union covers. Those rows are all
+ * `'openfoodfacts'` by construction (there was no other way to make one),
+ * which is why defaulting them is sound rather than a guess; `fallbackSource`
+ * is what a caller reading a snapshot from somewhere else passes instead.
+ * `barcode` and `sourceUrl` widened to nullable in the same bump, so an older
+ * row that omitted either normalises to null here too.
+ *
+ * null for anything that is not an object: a Bev with no snapshot, or a
+ * `bev_nutrition` row that is not there.
+ */
+export function mapNutrition(
+  raw: unknown,
+  fallbackSource: NutritionPreview['source'] = 'openfoodfacts',
+): NutritionPreview | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const snapshot = raw as NutritionPreview & { source?: NutritionPreview['source'] | null };
+  return {
+    ...snapshot,
+    barcode: snapshot.barcode ?? null,
+    sourceUrl: snapshot.sourceUrl ?? null,
+    source: snapshot.source ?? fallbackSource,
   };
 }
 

@@ -1,5 +1,11 @@
 # Barcode nutrition for new Bevs
 
+> This is the barcode route. A drink Open Food Facts has never heard of has its
+> panel read off a photo instead, on the device, with no service and no
+> credential: `docs/nutrition-label-ocr.md` (BEV-13, contract 3.10.0), which is
+> why `NutritionPreview` now carries a `source` and why `barcode` and
+> `sourceUrl` can be null.
+
 Selected design: gallery option 04, Purple masthead, in both themes. The label
 fades in for 250 ms, holds for two seconds, and fades out for 250 ms. No bounce,
 scale, slide or ambient animation. The result remains readable after the reveal.
