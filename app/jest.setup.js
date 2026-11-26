@@ -67,3 +67,31 @@ jest.mock('react-native-maps', () => {
   const Marker = ({ children, coordinate: _coordinate, ...props }) => React.createElement(Pressable, props, children);
   return { __esModule: true, default: MapView, Marker };
 });
+
+// expo-notifications is a native module (T-31 Release 2). Only src/features/notifications/push/
+// push.ts imports it, but the root layout mounts that wrapper's host, so every suite that renders
+// the app loads it. By default the phone has not been asked ("undetermined"), has no token (the
+// builds without the push entitlement fail that call), no launch tap and listeners that never fire.
+// Plain functions, not jest.fn(), so a suite overrides one with `jest.spyOn(Notifications, ...)` and
+// `jest.restoreAllMocks()` brings these defaults back.
+jest.mock('expo-notifications', () => {
+  const undetermined = { status: 'undetermined', granted: false, canAskAgain: true, expires: 'never', ios: { status: 0 } };
+  const subscription = () => ({ remove: () => undefined });
+  return {
+    __esModule: true,
+    DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
+    IosAuthorizationStatus: { NOT_DETERMINED: 0, DENIED: 1, AUTHORIZED: 2, PROVISIONAL: 3, EPHEMERAL: 4 },
+    getPermissionsAsync: async () => undetermined,
+    requestPermissionsAsync: async () => undetermined,
+    getExpoPushTokenAsync: async () => {
+      throw new Error('No push entitlement in tests');
+    },
+    setBadgeCountAsync: async () => true,
+    setNotificationHandler: () => undefined,
+    addNotificationReceivedListener: subscription,
+    addNotificationResponseReceivedListener: subscription,
+    getLastNotificationResponse: () => null,
+    getLastNotificationResponseAsync: async () => null,
+    clearLastNotificationResponse: () => undefined,
+  };
+});

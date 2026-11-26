@@ -289,6 +289,12 @@ P.SortToggle = [{ group: 'Actions', height: 80, width: 393 }, '', `
 h('div', { className: 'pv-narrow', style: { paddingTop: 16 } }, h(B.SortToggle, { label: 'Score', onClick: function () {}, onSearch: function () {} }), h(B.SortToggle, { label: 'Recent', onClick: function () {} }))`];
 
 // ---------- Inputs ----------
+P.Switch = [{ group: 'Actions', height: 110, subtitle: 'Tap to switch' }, '', `
+h('div', { className: 'pv', style: { gap: 28 } },
+  L('on', h(function S() { var st = React.useState(true); return h(B.Switch, { checked: st[0], onChange: st[1], label: 'Likes' }); })),
+  L('off', h(function S() { var st = React.useState(false); return h(B.Switch, { checked: st[0], onChange: st[1], label: 'Posts' }); })),
+  L('disabled', h(B.Switch, { checked: false, disabled: true, label: 'Comments' })))`];
+
 P.SearchBar = [{ group: 'Inputs', height: 150, width: 393 }, '', `
 h('div', { className: 'pv-col' },
   h(B.SearchBar, { placeholder: 'Search a Bev or a person', id: 'feed-search' }),
@@ -727,11 +733,81 @@ P.ScreenNotifications = [{ group: 'Screens', height: 852, width: 802, isPage: tr
 h('div', { className: 'nt-pair' },
   ${phone('feed', `
   h(F, null,
-    h(B.Header, { title: 'Notifications', onBack: function () {} }),${NOTIF_ROWS})`)},
+    h(B.Header, { title: 'Notifications', onBack: function () {}, actions: [{ icon: 'settings', label: 'Notification settings' }] }),${NOTIF_ROWS})`)},
   ${phone('feed', `
   h(F, null,
     h(B.Header, { title: 'Notifications', onBack: function () {} }),
     h('div', { className: 'nt-empty' }, h(B.EmptyState, { icon: 'bell', title: 'No notifications yet', body: "When someone follows you, likes a Bev you posted or comments on it, you'll see it here.", action: 'Find people' })))`)})`];
+
+// Settings > Notifications and its people list. The switches work, by the rules in the README.
+P.ScreenNotificationSettings = [{ group: 'Screens', height: 852, width: 802, isPage: true }, PHONE_CSS + `
+  .ns-pair { display: flex; gap: 16px; align-items: flex-start; }
+  .ns-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+  .ns-label { font-size: 17px; line-height: 22px; }
+  .ns-sub { display: block; font-size: 13px; line-height: 18px; color: var(--textSecondary); }
+  .ns-val { display: flex; align-items: center; gap: 4px; font-size: 15px; color: var(--textSecondary); }
+  .ns-note { padding: 12px 16px 0; font-size: 13px; line-height: 18px; color: var(--textSecondary); }
+  .ns-person { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+  .ns-person b { flex: 1; font-size: 17px; line-height: 22px; font-weight: 600; }
+  .ns-q { padding: 4px 16px 4px; }`, `
+h(function Demo() {
+  var st = React.useState({ paused: false, follows: true, likes: true, comments: true, posts: false });
+  var pk = React.useState({});
+  var s = st[0], picks = pk[0];
+  function set(key, on) {
+    var n = Object.assign({}, s);
+    if (key === 'paused') n.paused = on;
+    else if (on && s.paused) { n = { paused: false, follows: false, likes: false, comments: false, posts: false }; n[key] = true; }
+    else n[key] = on;
+    st[1](n);
+  }
+  function pick(handle, on) { var n = Object.assign({}, picks); n[handle] = on; pk[1](n); if (on) set('posts', true); }
+  var count = FRIENDS.filter(function (f) { return picks[f.handle]; }).length;
+  var row = function (key, label, sub) {
+    return h('div', { className: 'ns-row', key: key },
+      h('span', { className: 'ns-label' }, label, sub ? h('span', { className: 'ns-sub' }, sub) : null),
+      h(B.Switch, { checked: key === 'paused' ? s.paused : !s.paused && s[key], onChange: function (on) { set(key, on); }, label: label }));
+  };
+  return h('div', { className: 'ns-pair' },
+    ${phone(null, `
+    h(F, null,
+      h(B.Header, { title: 'Notifications', onBack: function () {} }),
+      row('paused', 'Pause all', s.paused ? 'Nothing is sent to this phone' : 'Switches every kind off for now'),
+      h(B.SectionHeader, { title: 'Tell me about' }),
+      row('follows', 'New followers'),
+      row('likes', 'Likes', 'On Bevs you posted'),
+      row('comments', 'Comments', 'On Bevs you posted'),
+      row('posts', 'Posts', 'When people you choose post a Bev'),
+      h('div', { className: 'ns-row' }, h('span', { className: 'ns-label' }, 'Choose people'),
+        h('span', { className: 'ns-val' }, count === 0 ? 'No one yet' : count === 1 ? '1 person' : count + ' people', h(B.Icon, { name: 'chevron-right', size: 20, strokeWidth: 2 }))),
+      h('p', { className: 'ns-note' }, 'Follows, likes and comments still show up in the app, whatever you switch off here.'))`)},
+    ${phone(null, `
+    h(F, null,
+      h(B.Header, { title: 'Post notifications', onBack: function () {} }),
+      h('div', { className: 'ns-q' }, h(B.SearchBar, { placeholder: 'Search people you follow', id: 'pn-q' })),
+      h('p', { className: 'ns-note' }, "You'll hear when the people you switch on post a Bev. The likes and comments they get are never sent."),
+      h(B.SectionHeader, { title: 'People you follow' }),
+      FRIENDS.map(function (f) {
+        return h('div', { className: 'ns-person', key: f.handle }, h(B.Avatar, { name: f.name, size: 44 }), h('b', null, f.handle),
+          h(B.Switch, { checked: !!picks[f.handle], onChange: function (on) { pick(f.handle, on); }, label: 'Post notifications for ' + f.handle }));
+      }))`)});
+})`];
+
+// The ask before the iOS prompt: a Sheet over Notifications, shown once.
+P.ScreenNotificationsAsk = [{ group: 'Screens', height: 852, width: 393, isPage: true }, PHONE_CSS + `
+  .ask { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 4px 24px 0; text-align: center; }
+  .ask .bv-empty-icon { background: var(--primaryTint); color: var(--primary); }
+  .ask-actions { display: flex; flex-direction: column; gap: 4px; width: 100%; margin-top: 12px; }`, phone('feed', `
+  h(F, null,
+    h(B.Header, { title: 'Notifications', onBack: function () {} }),${NOTIF_ROWS},
+    h(B.Sheet, { snap: 46 },
+      h('div', { className: 'ask' },
+        h('span', { className: 'bv-empty-icon' }, h(B.Icon, { name: 'bell', size: 28, strokeWidth: 1.75 })),
+        h('p', { className: 'screenTitle' }, 'Hear about it when it happens'),
+        h('p', { className: 'body bv-meta' }, 'Bevi can tell you when someone follows you, likes a Bev you posted or comments on it. You choose which in Settings.'),
+        h('div', { className: 'ask-actions' },
+          h(B.Button, { variant: 'primary', block: true }, 'Turn on notifications'),
+          h(B.Button, { variant: 'ghost', block: true }, 'Not now')))))`)];
 
 // Add Bev (the centre tab): the bar, Snap it, then the fastest routes to ranking something. No map.
 const ADD_CSS = PHONE_CSS + `

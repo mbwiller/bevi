@@ -4,6 +4,7 @@ import { StyleSheet, Text } from 'react-native';
 
 import { useCanReportBug, useSignOut } from '@/api/hooks';
 import { requestReport } from '@/features/bug-report/commands';
+import { pushAvailable } from '@/features/notifications/push/availability';
 import { Announce } from '@/components/Announce';
 import { actionErrorMessage } from '@/lib/errorCopy';
 import { SettingsRow, SettingsScreen, SettingsSection } from '@/features/settings/SettingsRow';
@@ -11,8 +12,8 @@ import { useSession } from '@/state/session';
 import { spacing, type, useTheme } from '@/theme';
 
 /**
- * Settings (§6.18): Account, Privacy, Blocked accounts, Sign out, Delete account, plus Report a bug and Filed reports
- * for internal reporters (docs/bug-workflow.md). Signing out clears the session;
+ * Settings (§6.18): Account, Privacy, Notifications (on a build that can receive push), Blocked accounts, Sign out,
+ * Delete account, plus Report a bug and Filed reports for internal reporters (docs/bug-workflow.md). Signing out clears the session;
  * the root gate then lands on sign in.
  */
 export default function SettingsIndexScreen() {
@@ -33,6 +34,8 @@ export default function SettingsIndexScreen() {
       <SettingsSection title="Your account">
         <SettingsRow label="Account" onPress={() => router.push('/settings/account')} />
         <SettingsRow label="Privacy" onPress={() => router.push('/settings/privacy')} />
+        {/* Only on a build that can receive push (T-31 Release 2). */}
+        {pushAvailable() ? <SettingsRow label="Notifications" onPress={() => router.push('/settings/notifications')} /> : null}
         <SettingsRow label="Blocked accounts" onPress={() => router.push('/settings/blocked')} />
       </SettingsSection>
       {/* Internal only, and only a second way in: the report button on every screen is the main
