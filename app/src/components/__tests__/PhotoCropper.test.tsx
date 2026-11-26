@@ -2,6 +2,8 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 
+import { spacing, type } from '@/theme';
+
 import { PhotoCropper } from '../PhotoCropper';
 
 // Shared values that survive a re-render, as on a device (the packaged mock makes new ones each render).
@@ -51,10 +53,26 @@ it('frames the centre square when nothing has moved', async () => {
   expect(onDone).toHaveBeenCalledWith({ x: 200, y: 0, size: 1200 });
 });
 
-it('keeps the stage inside a short room, so the buttons stay on screen', async () => {
+/** The caption's line and its padding: what the stage leaves below itself before the caption is measured. */
+const CAPTION_ROOM = type.caption.lineHeight + spacing.md;
+
+it('keeps the stage inside a short room, so the caption and the buttons stay on screen', async () => {
   await show();
   await measure(1200, 300);
-  expect(screen.getByTestId('photo-cropper-stage')).toHaveStyle({ width: 300, height: 300 });
+  expect(screen.getByTestId('photo-cropper-stage')).toHaveStyle({ width: 300 - CAPTION_ROOM, height: 300 - CAPTION_ROOM });
+});
+
+it('leaves room for the caption from the first drawn frame, so the stage does not shrink once it is measured', async () => {
+  await show();
+  // Only the room is measured: the caption's onLayout has not come in yet.
+  await measure(SIDE, 400);
+  const first = 400 - CAPTION_ROOM;
+  expect(screen.getByTestId('photo-cropper-stage')).toHaveStyle({ width: first, height: first });
+  // The caption then reports the height that was reserved: nothing moves.
+  await fireEvent(screen.getByText('Drag to move. Pinch to zoom.'), 'layout', {
+    nativeEvent: { layout: { x: 0, y: first, width: SIDE, height: CAPTION_ROOM } },
+  });
+  expect(screen.getByTestId('photo-cropper-stage')).toHaveStyle({ width: first, height: first });
 });
 
 it('moves with a drag and stops at the photo’s edge', async () => {

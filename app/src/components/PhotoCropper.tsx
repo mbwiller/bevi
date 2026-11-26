@@ -37,6 +37,8 @@ const A11Y_STEP = 0.5;
 const SETTLE_MS = motion.base;
 /** bundle.css `.bv-move-*`'s easing. */
 const EASE = Easing.bezier(0.2, 0.8, 0.2, 1);
+/** The caption's one line and its `paddingTop` (`styles.hint`), before it has been measured. */
+const CAPTION_ROOM = type.caption.lineHeight + spacing.md;
 const A11Y_ACTIONS = [{ name: 'increment' as const }, { name: 'decrement' as const }];
 
 function zoomValue(zoom: number): string {
@@ -64,7 +66,10 @@ export function PhotoCropper({ src, width, height, onDone, onCancel, style }: Ph
   const stage = useRef<View>(null);
 
   // The square is as big as the room allows: the whole width on a phone, never taller than the space left over.
-  const side = Math.max(0, Math.floor(Math.min(room.width, room.height - hint)));
+  // Until the caption is measured, its room is reserved from its type and padding, so the first frame
+  // is already the right size and the stage does not shrink a frame later.
+  const hintRoom = hint > 0 ? hint : CAPTION_ROOM;
+  const side = Math.max(0, Math.floor(Math.min(room.width, room.height - hintRoom)));
   const d = Math.max(0, side - 2 * spacing.gutter);
   const base = cropBase(width, height, d);
 

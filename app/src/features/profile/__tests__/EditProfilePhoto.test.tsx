@@ -183,6 +183,22 @@ describe('Edit profile › photo', () => {
     expect((await api.profile.getMe()).avatarUrl).toBeNull();
   });
 
+  it('closing the Edit profile sheet with the step open cancels the step', async () => {
+    const upload = jest.spyOn(api.media, 'upload');
+    const sheet = await openEditSheet();
+    await fireEvent.press(within(sheet).getByLabelText('Add a photo'));
+    await cropStep();
+    // The sheet is closed from behind the step (its scrim), as a system dismissal would.
+    await fireEvent.press(screen.getByTestId('sheet-scrim'));
+    await waitFor(() => expect(screen.queryByTestId('avatar-crop-step')).toBeNull());
+    expect(screen.queryByRole('header', { name: 'Move and scale' })).toBeNull();
+    expect(mockCrop).not.toHaveBeenCalled();
+    expect(upload).not.toHaveBeenCalled();
+    expect((await api.profile.getMe()).avatarUrl).toBeNull();
+    await waitFor(() => expect(mockRevoke).toHaveBeenCalledWith('blob:working'));
+    upload.mockRestore();
+  });
+
   it("a square that can't be encoded says so and uploads nothing", async () => {
     const upload = jest.spyOn(api.media, 'upload');
     mockCrop.mockRejectedValue(new UnsupportedImageError());

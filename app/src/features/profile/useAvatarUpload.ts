@@ -114,7 +114,11 @@ export function useAvatarUpload() {
       if (mounted.current) setCropping((open) => (open === source ? null : open));
       if (!crop || !live()) return;
       photo = await cropPhoto(source, crop, AVATAR_MAX_EDGE);
+      // A newer change (remove, another photo) or leaving the screen stops this one at each step,
+      // so an older photo can never be saved over it.
+      if (!live()) return;
       const { assetId } = await uploadAsync({ kind: 'avatar', file: photo.file, mimeType: photo.mimeType });
+      if (!live()) return;
       const profile = await updateAsync({ avatarAssetId: assetId });
       if (mounted.current) syncSession(profile);
     } catch (e) {
