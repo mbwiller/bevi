@@ -979,7 +979,7 @@ Target ≈ 380 seed Bevs. Enough that onboarding and search feel populated for 2
 | `spirits_cocktails` | 12 | Margarita, Old Fashioned, Espresso Martini, Tito's soda, Jack & Coke, … |
 | `other` | 15 | Horchata, agua fresca (jamaica, tamarindo), Yakult, Calpico, Ramune, kombucha (GT's 4), Vita Coco |
 
-Mark at least 30 as `is_starter` (the Coke/Diet Coke/Sprite/LaCroix/Red Bull tier of fame), none alcoholic, so `getStarterCandidates()` always returns ≥ 30 even for minors; Matt's `selectStarterSet()` picks 10 of them client-side.
+Mark at least 30 as `is_starter` (the Coke/Diet Coke/Sprite/LaCroix/Red Bull tier of fame), at least 30 of them non-alcoholic, so `getStarterCandidates()` always returns ≥ 30 even for minors (the catalog now flags 77, four or five in most categories, beer, wine and spirits among them: the age filter hides those from anyone who cannot see alcohol); Matt's `selectStarterSet()` picks 10 of them client-side.
 
 ### 7.2 Source format and rules
 
