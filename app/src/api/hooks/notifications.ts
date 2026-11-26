@@ -1,9 +1,9 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { FeedItem, Page } from '@bevi/shared';
+import type { FeedItem, NotificationSettings, Page, PostNotificationPerson } from '@bevi/shared';
 
 import { api } from '../client';
 import { keys } from '../keys';
-import { cursorPaging, rollback, snapshot } from './util';
+import { cursorPaging, mapCachedItems, rollback, snapshot } from './util';
 
 /** Notifications per `notifications.list` page. */
 export const NOTIFICATIONS_PAGE = 20;
@@ -71,5 +71,117 @@ export function usePost(id: string | undefined) {
     queryFn: async (): Promise<Page<FeedItem>> => ({ items: [await api.feed.getPost(id!)], nextCursor: null }),
     select: (page) => page.items[0] ?? null,
     enabled: !!id,
+  });
+}
+
+/**
+ * The push settings (T-31 Release 2): Pause all and the four kinds. What they mean for each other
+ * is the app's rule (features/notifications/settingsRules.ts), never worked out here.
+ */
+export function useNotificationSettings() {
+  return useQuery({ queryKey: keys.notifications.settings(), queryFn: () => api.notifications.getSettings() });
+}
+
+/** Every save of the push settings shares this key, so the last one to finish knows it is the last. */
+export const NOTIFICATION_SETTINGS_MUTATION = ['bevi', 'notificationSettings'] as const;
+
+/**
+ * Saves all five settings at once (the server keeps exactly what it is sent). Optimistic: the
+ * switches move at once and go back if the save fails. When the last save in a row has finished
+ * the settings are read again, so quick taps never leave the screen out of step with the server.
+ */
+export function useUpdateNotificationSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationKey: NOTIFICATION_SETTINGS_MUTATION,
+    mutationFn: (next: NotificationSettings) => api.notifications.updateSettings(next),
+    onMutate: async (next) => {
+      const snap = await snapshot(qc, [keys.notifications.settings()]);
+      qc.setQueryData<NotificationSettings>(keys.notifications.settings(), next);
+      return { snap };
+    },
+    onError: (_e, _next, ctx) => rollback(qc, ctx?.snap),
+    onSettled: () => {
+      if (qc.isMutating({ mutationKey: NOTIFICATION_SETTINGS_MUTATION }) <= 1) {
+        void qc.invalidateQueries({ queryKey: keys.notifications.settings() });
+      }
+    },
+  });
+}
+
+/**
+ * Post notifications' list (T-31 Release 2): the people the caller follows, those already chosen
+ * first, filtered by `q` on the server. 20 per page.
+ */
+export function usePostNotificationPeople(q: string) {
+  return useInfiniteQuery({
+    queryKey: keys.notifications.postPeople(q),
+    queryFn: ({ pageParam }) => api.notifications.listPostNotificationPeople({ cursor: pageParam, q: q || undefined }),
+    ...cursorPaging,
+  });
+}
+
+/**
+ * Chooses someone, or not, for post notifications. Optimistic on every cached search of the list,
+ * and back if it fails. The lists are only marked stale afterwards: read again now they would put
+ * the person just chosen at the top, under the finger. The "Choose people" count is read again.
+ */
+export function useSetPostNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, on }: { userId: string; on: boolean }) => api.notifications.setPostNotification(userId, on),
+    onMutate: async ({ userId, on }) => {
+      const snap = await snapshot(qc, [keys.notifications.postPeopleAll]);
+      qc.setQueriesData({ queryKey: keys.notifications.postPeopleAll }, (data: unknown) =>
+        mapCachedItems<PostNotificationPerson>(data, (p) => (p.id === userId ? { ...p, subscribed: on } : p)),
+      );
+      return { snap };
+    },
+    onError: (_e, _v, ctx) => rollback(qc, ctx?.snap),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: keys.notifications.postPeopleAll, refetchType: 'none' });
+      void qc.invalidateQueries({ queryKey: keys.notifications.chosenCount() });
+    },
+  });
+}
+
+/** Where "Choose people" stops counting: past it the row reads "100+ people". */
+export const CHOSEN_COUNT_CAP = 100;
+/** The page size the count reads in (the API's largest). */
+const CHOSEN_COUNT_PAGE = 50;
+
+/** How many people are chosen, and whether there may be more than `CHOSEN_COUNT_CAP`. */
+export interface ChosenCount {
+  count: number;
+  capped: boolean;
+}
+
+/**
+ * Counts the people chosen for post notifications. The API has no count, but it lists the chosen
+ * first, so this counts the chosen rows at the head of the list: it reads another page only while
+ * the last one ended on a chosen row, and stops at `CHOSEN_COUNT_CAP`.
+ */
+export async function countChosenPeople(
+  list: (cursor: string | undefined) => Promise<Page<PostNotificationPerson>>,
+): Promise<ChosenCount> {
+  let count = 0;
+  let cursor: string | undefined;
+  for (;;) {
+    const page = await list(cursor);
+    for (const person of page.items) {
+      if (!person.subscribed) return { count, capped: false };
+      count += 1;
+      if (count >= CHOSEN_COUNT_CAP) return { count: CHOSEN_COUNT_CAP, capped: true };
+    }
+    if (!page.nextCursor || page.items.length === 0) return { count, capped: false };
+    cursor = page.nextCursor;
+  }
+}
+
+/** The "Choose people" row's count (`countChosenPeople`), read again when someone is chosen or not. */
+export function useChosenPeopleCount() {
+  return useQuery({
+    queryKey: keys.notifications.chosenCount(),
+    queryFn: () => countChosenPeople((cursor) => api.notifications.listPostNotificationPeople({ cursor, limit: CHOSEN_COUNT_PAGE })),
   });
 }

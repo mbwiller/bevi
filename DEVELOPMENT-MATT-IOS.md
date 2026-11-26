@@ -85,6 +85,7 @@ device**: there is no Xcode on the machine it was built on.
 | IM-12 store assets | Drafted as text: `docs/app-store-submission.md` | docs branch | Screenshots, the founders' read of every line, the forms |
 | IM-13 report + block | Done in code, both halves (#261 contract 3.1.0, #277; #290 fixed report from a comment, which could not open on iPhone) | integration | Device checks, the comment path first. Who reads the reports, and a published contact |
 | IM-14 test-run interface | Not started | | After layer 3 exists |
+| IM-15 push notifications | Built and off: settings, Post notifications, the ask, registration, the badge, opening from a push, all behind `extra.push` (T-31 Release 2) | `ui/ticket-31-push` | The config change (plugin, entitlement, push key, `extra.push = true`), then the device checks in IM-15 |
 | IS-4 crash reporting | Sentry was added and removed the same night (#284, #286): the decision is an in-house reporter, **not built**. A root error boundary and a `captureError` seam with nothing behind it remain | integration | The reporter. Until then native crashes show only in Apple's reports |
 
 Things to know before picking up the next branch:
@@ -983,6 +984,65 @@ Open, and worth settling before any code:
 - **The ingest secret** is a CI secret, so it runs into §1's admin question.
 - **What may be shown.** Only FakeApi runs, so no real person's data is ever
   on the page. A flow against the live backend must never post screenshots.
+
+---
+
+### IM-15 — Push notifications
+
+**Status: built and off (T-31 Release 2, 2026-11-26). Waiting on the config
+change that adds the `expo-notifications` plugin, the push entitlement and the
+Apple push key, and sets `extra.push = true`.**
+
+What is in the app: Settings › Notifications (Pause all, one switch per kind,
+Choose people), Post notifications (people you follow, each with a switch),
+the ask before the iOS prompt (a Sheet over Notifications, once per device),
+the gear in the Notifications header, device registration, the icon's badge,
+and opening the app from a push.
+
+How it is put together, in `src/features/notifications/push/`:
+
+- **The wrapper.** `push.ts` is the only file that imports `expo-notifications`;
+  `push.web.ts` is its web twin, every function a no-op that answers
+  `unavailable`, so the web bundle never carries the library (check a web
+  export with a grep for `expo-notifications`). Every function is
+  promise-based and never throws to its caller.
+- **The gate.** `availability.ts` answers `extra.push === true` from the app
+  config; `availability.web.ts` answers false. Everything the person can see,
+  and everything that asks the phone for anything, checks it first: the
+  Settings row, the gear, the ask, the permission, the token, the listeners,
+  the badge, and the two settings routes (which redirect to Settings without
+  it). It exists because a build without the entitlement can never receive a
+  push, so offering one would be a promise the build cannot keep. With it off
+  the app behaves exactly as before (`shell.test.tsx`, "push, with the gate
+  off").
+- **The token.** `getPushToken` returns null on any failure and says nothing.
+  A build without the entitlement fails that call on every launch, so it must
+  stay silent. A token is never logged and never put in an error.
+- **The lifecycle.** `PushHost`, mounted once by the root layout beside the
+  Stack, only while signed in: registers the device on launch and at each
+  foreground (once per token per account), keeps the badge at the bell's
+  count, refreshes the count when a push arrives, and opens `data.url` only if
+  it is one of the allowed routes (`pushRoute.ts`), else Notifications.
+  Sign-out forgets the token first, bounded at 3 seconds so it can never hold
+  sign-out up.
+
+What only a real phone with the entitlement can show, by hand, once the gate is
+on:
+
+1. Open Notifications with something in it: the ask appears once; Turn on
+   notifications shows the iOS prompt after the sheet has gone; Allow; the
+   device appears in `push_tokens`.
+2. From another account, like one of your posts with the app in the
+   background: a banner arrives, and the icon's badge matches the bell.
+3. The same with the app open: a banner with no sound, and the bell's count
+   goes up without the list jumping.
+4. Force-quit the app, then tap a push: the app opens on that post (on the
+   comments for a comment push), after the splash, not on the Feed.
+5. Open Notifications: the bell and the badge go to 0.
+6. Refuse the prompt on a fresh install: Settings › Notifications says
+   notifications are off and Open Settings opens Bevi's page; turn them on
+   there and come back: the line is gone.
+7. Sign out: no more pushes reach that phone for that account.
 
 ---
 

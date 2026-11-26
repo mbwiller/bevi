@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 import { isApiError, type Session, type SignInInput, type SignUpInput } from '@bevi/shared';
 
+import { forgetThisDevice } from '@/features/notifications/push/device';
+
 import { api } from '../client';
 import { keys } from '../keys';
 import { clearUserQueries, resetUserQueries } from './util';
@@ -101,10 +103,19 @@ export function useSignUp() {
   });
 }
 
+/**
+ * Signs out. First, while the session still works, this device's push token is forgotten by the
+ * server and the icon's badge cleared (T-31 Release 2): best effort and bounded, it never fails or
+ * holds up the sign-out (features/notifications/push/device.ts), and does nothing on a build
+ * without push.
+ */
 export function useSignOut() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: () => api.signOut(),
+    mutationFn: async () => {
+      await forgetThisDevice();
+      await api.signOut();
+    },
     onSuccess: () => {
       qc.setQueryData(keys.session(), null);
       clearUserQueries(qc);
