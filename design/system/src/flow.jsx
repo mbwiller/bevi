@@ -161,6 +161,39 @@ export function PriceTierPicker({ value, estimated = false, onChange, className 
   );
 }
 
+/** The most go-tos a person picks (the contract's `MAX_CATEGORY_PICKS`); `rank` runs 1 to this. */
+const MAX_PICKS = 3;
+
+/** A PickTile's accessible name: the label, then its place once picked, or why it can't be picked. */
+export function pickTileLabel(label, rank, disabled) {
+  if (rank) return label + ', your number ' + rank + ' pick';
+  return disabled ? label + ". You've picked " + MAX_PICKS + ' already' : label;
+}
+
+/**
+ * One category in onboarding's go-tos grid: a Bev's art (BevImage 56) over the category's label. Picked,
+ * it takes `primaryTint` with a 2pt `primary` rim and its `rank` (the order it was tapped in) in a `primary`
+ * badge; `disabled` dims an unpicked tile once three are picked. The badge pops in when a tap picks it.
+ */
+export function PickTile({ label, src, art, rank, disabled = false, onClick, className }) {
+  const [pop, setPop] = React.useState(0);
+  const picked = rank != null;
+  return (
+    <button
+      type="button"
+      className={cx('bv', 'bv-pick', 'bv-press', picked && 'bv-pick-on', disabled && 'bv-pick-dim', className)}
+      disabled={disabled}
+      aria-pressed={picked}
+      aria-label={pickTileLabel(label, rank, disabled)}
+      onClick={() => { if (!picked) setPop((n) => n + 1); if (onClick) onClick(); }}
+    >
+      <span className="bv-pick-art" aria-hidden="true"><BevImage size={56} src={src} art={art} /></span>
+      <span className="body bv-pick-label">{label}</span>
+      {picked ? <span key={pop} className={cx('bv-pick-badge', pop > 0 && 'bv-pop')} aria-hidden="true">{rank}</span> : null}
+    </button>
+  );
+}
+
 /**
  * Gut-check choice: a `primary` ring filled to a level (loved full, fine half, disliked empty) over its label.
  * The level carries the order, so it never leans on colour. The chosen one gets a check badge; pass `dimmed`

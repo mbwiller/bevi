@@ -80,7 +80,7 @@ function ProfileForm({ me }: { me: Profile }) {
       const timezone = deviceTimezone();
       await updateMe.mutateAsync({ displayName: name, ...(timezone ? { timezone } : null) });
       if (!birthdateLocked) await setBirthDate.mutateAsync(birthdate);
-      router.push('/onboarding/starter');
+      router.push('/onboarding/picks');
     } catch (e) {
       const field = errorField(e);
       if (field === 'displayName' || field === 'birthdate') setError({ field, message: (e as Error).message });

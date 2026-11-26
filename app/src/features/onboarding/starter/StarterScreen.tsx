@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useMe, useMyRankings, useStarterCandidates, useUpdateMe } from '@/api/hooks';
+import { useCategoryPicks, useMe, useMyRankings, useStarterCandidates, useUpdateMe } from '@/api/hooks';
 import { flattenPages } from '@/api/hooks/util';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
@@ -16,7 +16,7 @@ import { useSession } from '@/state/session';
 import { spacing, type, useTheme } from '@/theme';
 
 import { STARTER_COPY, introBody, thresholdLine } from './copy';
-import { hasMoreStarters, selectStarterRound } from './selection';
+import { hasMoreStarters, selectStarterRound, visiblePicks } from './selection';
 import { StarterStep } from './StarterStep';
 import { StarterSummary } from './StarterSummary';
 
@@ -27,16 +27,18 @@ const SKELETON_BLOCK = 155;
 type View_ = 'intro' | 'steps' | 'summary';
 
 /**
- * §6.3 Onboarding step 2: the starter ranking. Candidates → `selectStarterSet` (seeded by the user
- * id) → one Bev at a time; Done turns on at MIN_N_USER rankings; the summary finishes onboarding.
- * Onboarding routes can't reach search, so running out offers "Show me more" (the next round of
- * starters, a new seed over the ones not shown yet).
+ * §6.3 Onboarding, after the go-tos step: the starter ranking. Candidates → `selectStarterSet`
+ * (seeded by the user id, led by their go-to categories) → one Bev at a time; Done turns on at
+ * MIN_N_USER rankings; the summary finishes onboarding. Onboarding routes can't reach search, so
+ * running out offers "Show me more" (the next round of starters, a new seed over the ones not shown
+ * yet, the same picks).
  */
 export function StarterScreen() {
   const { colors } = useTheme();
   const back = useBack();
   const me = useMe();
   const candidatesQ = useStarterCandidates();
+  const picksQ = useCategoryPicks();
   const rankingsQ = useMyRankings({ limit: RANKINGS_LIMIT });
   const updateMe = useUpdateMe();
   const completeOnboarding = useSession((s) => s.completeOnboarding);
@@ -47,17 +49,20 @@ export function StarterScreen() {
 
   const candidates = candidatesQ.data;
   const profile = me.data;
+  // `[]` (no go-tos) is an answer too; undefined means they haven't loaded yet.
+  const picks = picksQ.data;
   const byId = useMemo(() => new Map((candidates ?? []).map((c) => [c.id, c])), [candidates]);
   // Each round is picked once and kept: ranking a Bev changes its ratingCount, and a re-pick on
-  // the refetched candidates would reorder the set under the user.
+  // the refetched candidates would reorder the set under the user. Round 0 waits for the picks, so
+  // it is never chosen without them and then left that way.
   useEffect(() => {
-    if (!rounds && candidates && profile) setRounds([selectStarterRound(candidates, profile, 0)]);
-  }, [rounds, candidates, profile]);
+    if (!rounds && candidates && profile && picks) setRounds([selectStarterRound(candidates, profile, picks, 0)]);
+  }, [rounds, candidates, profile, picks]);
   const ids = useMemo(() => (rounds ?? []).flat(), [rounds]);
   const seen = useMemo(() => new Set(ids), [ids]);
   const nextRound = () => {
-    if (!candidates || !profile) return;
-    setRounds((r) => [...(r ?? []), selectStarterRound(candidates, profile, r?.length ?? 0, seen)]);
+    if (!candidates || !profile || !picks) return;
+    setRounds((r) => [...(r ?? []), selectStarterRound(candidates, profile, picks, r?.length ?? 0, seen)]);
   };
 
   const rankings = useMemo(() => flattenPages(rankingsQ.data), [rankingsQ.data]);
@@ -71,11 +76,14 @@ export function StarterScreen() {
   const finish = () => updateMe.mutate({ onboarded: true }, { onSuccess: (p) => completeOnboarding(p) });
 
   // A rankings refetch that fails after a save keeps the list it had; only a first load blocks.
+  // The picks likewise: once loaded, a failed refetch changes nothing.
   const rankingsError = rankingsQ.isError && !rankingsQ.data ? rankingsQ.error : null;
-  const blocking = me.error ?? candidatesQ.error ?? rankingsError ?? null;
+  const picksError = picksQ.isError && !picksQ.data ? picksQ.error : null;
+  const blocking = me.error ?? candidatesQ.error ?? picksError ?? rankingsError ?? null;
   const retry = () => {
     if (me.isError) void me.refetch();
     if (candidatesQ.isError) void candidatesQ.refetch();
+    if (picksQ.isError) void picksQ.refetch();
     if (rankingsQ.isError) void rankingsQ.refetch();
   };
 
@@ -107,7 +115,9 @@ export function StarterScreen() {
         <Text style={[type.displayDrop, { color: colors.text }]} accessibilityRole="header">
           {STARTER_COPY.introTitle}
         </Text>
-        <Text style={[type.bodyLarge, { color: colors.text }]}>{introBody(ids.length)}</Text>
+        <Text style={[type.bodyLarge, { color: colors.text }]}>
+          {introBody(ids.length, visiblePicks(picks ?? [], profile).length > 0)}
+        </Text>
         <Text style={[type.body, { color: colors.textSecondary }]}>{thresholdLine(ranked)}</Text>
         <Button variant="primary" block onPress={() => setView('steps')}>
           {STARTER_COPY.start}
