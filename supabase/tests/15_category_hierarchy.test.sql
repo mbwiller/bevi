@@ -139,10 +139,10 @@ select ok(
 -- move and this file should move with them. The STRUCTURAL claims below -- two
 -- levels, inherited flags, roots unchanged -- are the ones that must never move.
 
-select is((select count(*)::int from public.categories where parent_id is null), 15,
-          'the 15 roots are unchanged in number');
-select is((select count(*)::int from public.categories where parent_id is not null), 60,
-          'D-04''s 60 leaves loaded');
+select is((select count(*)::int from public.categories where parent_id is null), 17,
+          'the 17 roots (TICKET-23 added cider and promoted hard_seltzer)');
+select is((select count(*)::int from public.categories where parent_id is not null), 59,
+          'D-04''s leaves loaded, less hard_seltzer, now a root');
 
 select is(
   (select count(*)::int
@@ -177,14 +177,14 @@ select is(
 
 select is(
   (select count(*)::int from public.bevs where source = 'seed' and leaf_category_id is not null),
-  344,
-  '344 seeded Bevs were reassigned to a leaf'
+  338,
+  '338 seeded Bevs were reassigned to a leaf'
 );
 
 select is(
   (select count(*)::int from public.bevs where source = 'seed' and leaf_category_id is null),
-  37,
-  '37 seeded Bevs sit on an unsplit parent (water 14, sports 23)'
+  43,
+  '43 seeded Bevs sit on an unsplit parent (water 14, sports 23, hard_seltzer 6)'
 );
 
 -- The two unsplit roots have no leaves to point at, so their Bevs must be null
@@ -320,8 +320,8 @@ set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000ca001", 
 
 select is(
   (select count(*)::int from public.get_category_progress()),
-  15,
-  'get_category_progress returns the 15 roots, not all 75 categories'
+  17,
+  'get_category_progress returns the 17 roots, not all 76 categories'
 );
 select is(
   (select count(*)::int
@@ -341,8 +341,8 @@ reset role;
 set local role authenticated;
 set local request.jwt.claims = '{"sub": "00000000-0000-4000-8000-0000000ca001", "role": "authenticated"}';
 
-select is((select count(*)::int from public.get_category_tree()), 75,
-          'an adult sees all 75 nodes');
+select is((select count(*)::int from public.get_category_tree()), 76,
+          'an adult sees all 76 nodes');
 
 -- Root-then-leaf: a client builds the tree in one pass, so no leaf may appear
 -- before its own root. Expressed as "no leaf whose parent comes later".

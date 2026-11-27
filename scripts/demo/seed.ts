@@ -618,7 +618,7 @@ async function verify(http: Http, plan: Plan, target: Target): Promise<boolean> 
   console.log(`  People leaderboard (get_user_leaderboard): ${users.length} row(s)`);
 
   // Alcohol (IS-3): visible to this account, server-side
-  const alcohol = feed.filter((f) => ["beer", "wine", "spirits_cocktails"].includes(f.bev_category_id)).length;
+  const alcohol = feed.filter((f) => ["beer", "wine", "spirits_cocktails", "hard_seltzer", "cider"].includes(f.bev_category_id)).length;
   console.log(`  Alcohol (IS-3, over 21): ${alcohol} alcoholic post(s) on the first feed page`);
 
   // Recommended: @bevi/ranking's recommend() over get_prediction_snapshot, as recs.ts does

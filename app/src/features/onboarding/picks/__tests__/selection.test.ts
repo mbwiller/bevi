@@ -67,15 +67,15 @@ describe('prefillPicks', () => {
   });
 });
 
-it('offers every visible category but Other: 14 for 21+, 11 otherwise', () => {
+it('offers every visible category but Other: 16 for 21+, 11 otherwise', () => {
   const adult = pickableCategories(true).map((c) => c.id);
   const minor = pickableCategories(false).map((c) => c.id);
-  expect(adult).toHaveLength(14);
+  expect(adult).toHaveLength(16);
   expect(minor).toHaveLength(11);
   expect(adult).not.toContain('other');
   expect(minor).not.toContain('other');
-  expect(adult).toEqual(expect.arrayContaining(['beer', 'wine', 'spirits_cocktails']));
-  expect(minor.some((id) => ['beer', 'wine', 'spirits_cocktails'].includes(id))).toBe(false);
+  expect(adult).toEqual(expect.arrayContaining(['beer', 'wine', 'spirits_cocktails', 'hard_seltzer', 'cider']));
+  expect(minor.some((id) => ['beer', 'wine', 'spirits_cocktails', 'hard_seltzer', 'cider'].includes(id))).toBe(false);
 });
 
 it("picks each category's art: the most-rated starter, then name, then id", () => {

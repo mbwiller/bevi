@@ -2,7 +2,7 @@ import type { CategoryId } from '@bevi/shared';
 
 import type { IconName } from '@/components/Icon';
 
-// The 15 drink categories, mirroring the design system's `Bevi.categories` (design/system/src/core.jsx):
+// The 17 drink categories, mirroring the design system's `Bevi.categories` (design/system/src/core.jsx):
 // labels in the interface's sentence case, one Lucide icon each, and the alcoholic flag. Ids match
 // data/catalog/categories.json (checked by lib/__tests__/categories.test.ts).
 
@@ -30,6 +30,8 @@ export const CATEGORIES: readonly CategoryInfo[] = [
   { id: 'beer', label: 'Beer', icon: 'beer', isAlcoholic: true },
   { id: 'wine', label: 'Wine', icon: 'wine', isAlcoholic: true },
   { id: 'spirits_cocktails', label: 'Spirits & cocktails', icon: 'martini', isAlcoholic: true },
+  { id: 'hard_seltzer', label: 'Hard seltzer', icon: 'sparkle', isAlcoholic: true },
+  { id: 'cider', label: 'Cider', icon: 'apple', isAlcoholic: true },
   { id: 'other', label: 'Other', icon: 'globe', isAlcoholic: false },
 ];
 
@@ -46,7 +48,7 @@ export function categoryIcon(id: CategoryId): IconName {
   return CATEGORY_ICON[id] ?? 'globe';
 }
 
-/** The categories a user may see: the alcoholic three are hidden when `canSeeAlcohol` is false. */
+/** The categories a user may see: the alcoholic ones are hidden when `canSeeAlcohol` is false. */
 export function visibleCategories(canSeeAlcohol: boolean): readonly CategoryInfo[] {
   return canSeeAlcohol ? CATEGORIES : CATEGORIES.filter((c) => !c.isAlcoholic);
 }

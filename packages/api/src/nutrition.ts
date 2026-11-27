@@ -44,12 +44,15 @@ export function parseNutrition(barcode: string, data: unknown): NutritionPreview
  * water `en:waters`. Tag ids are OFF's categories taxonomy; a product usually
  * carries its ancestors too, but not always (a sports drink can have
  * `en:dietary-drink-for-sport` without `en:sports-drinks`), so both are named
- * where it matters. Where the catalog has a convention it is followed: hard
- * seltzer is filed under beer, kombucha under other, lemonade under juice
+ * where it matters. Hard seltzer and cider come before beer, which a seltzer
+ * can also be tagged. Where the catalog has a convention it is followed:
+ * kombucha under other, lemonade under juice
  * (`data/catalog/bevs.csv`). OFF has no tag for boba.
  */
 const CATEGORY_RULES: ReadonlyArray<readonly [CategoryId, readonly string[]]> = [
-  ['beer', ['en:beers', 'en:hard-seltzers']],
+  ['hard_seltzer', ['en:hard-seltzers']],
+  ['cider', ['en:ciders']],
+  ['beer', ['en:beers']],
   ['wine', ['en:wines']],
   ['spirits_cocktails', ['en:distilled-beverages', 'en:hard-liquors', 'en:liqueurs', 'en:alcoholic-cocktails']],
   ['energy', ['en:energy-drinks']],
@@ -82,10 +85,10 @@ function categoryFor(tags: unknown, name: string | null): CategoryId | null {
   if (!Array.isArray(tags)) return null;
   const has = (tag: string) => tags.includes(tag);
   const match = CATEGORY_RULES.find(([, any]) => any.some(has))?.[0] ?? null;
-  // Alcohol that is none of beer, wine or spirits (a cider, a hard tea) has no
+  // Alcohol that is in none of the alcoholic categories (a hard tea, a mead) has no
   // Bevi category to map to. Falling through would file it as the soft drink
   // it is also tagged as, in front of people who cannot see alcohol.
-  const alcoholic = match === 'beer' || match === 'wine' || match === 'spirits_cocktails';
+  const alcoholic = match === 'beer' || match === 'wine' || match === 'spirits_cocktails' || match === 'hard_seltzer' || match === 'cider';
   if (tags.some(saysAlcohol) && !alcoholic) return null;
   if (match === 'soda' && has('en:diet-beverages')) return 'diet_soda';
   // Many sparkling waters are only tagged `en:waters`; the name says which.

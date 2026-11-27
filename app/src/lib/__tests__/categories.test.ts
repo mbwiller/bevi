@@ -46,5 +46,5 @@ it('matches the design system icons', () => {
 it('hides the alcoholic categories for under-21 users', () => {
   expect(visibleCategories(false).map((c) => c.id)).not.toEqual(expect.arrayContaining(['beer']));
   expect(visibleCategories(false)).toHaveLength(12);
-  expect(visibleCategories(true)).toHaveLength(15);
+  expect(visibleCategories(true)).toHaveLength(17);
 });

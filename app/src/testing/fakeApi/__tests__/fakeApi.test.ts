@@ -100,7 +100,7 @@ describe('fixtures through the API', () => {
     expect((await api.bevs.search({ q: '', limit: 100 })).items.map((b) => b.id)).not.toContain(ALCOHOLIC_BEV_ID);
     const minorStarters = await api.bevs.getStarterCandidates();
     expect(minorStarters.length).toBeGreaterThanOrEqual(30);
-    expect(minorStarters.filter((b) => ['beer', 'wine', 'spirits_cocktails'].includes(b.categoryId))).toEqual([]);
+    expect(minorStarters.filter((b) => ['beer', 'wine', 'spirits_cocktails', 'hard_seltzer', 'cider'].includes(b.categoryId))).toEqual([]);
     await expect(api.bevs.get(ALCOHOLIC_BEV_ID)).rejects.toMatchObject({ code: 'age_restricted' });
   });
 

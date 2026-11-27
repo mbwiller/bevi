@@ -135,7 +135,8 @@
 // 3.7.0: the notifications inbox (notifications.list/unreadCount/markRead) and feed.getPost (T-31), additive.
 // 3.8.0: push notifications: settings, post subscriptions, device tokens (T-31 Release 2), additive.
 // 3.9.0: profile.getCategoryPicks / setCategoryPicks, the go-to categories picked in onboarding (DELIVERABLE-44), additive.
-export const CONTRACT_VERSION = '3.9.0';
+// 3.10.0: CategoryId gains 'hard_seltzer' and 'cider', both alcoholic (TICKET-23), additive.
+export const CONTRACT_VERSION = '3.10.0';
 
 export * from './enums';
 export * from './errors';

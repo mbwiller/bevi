@@ -84,7 +84,9 @@ describe('barcode product, for filling in a new Bev', () => {
     ['Orange Juice', tags('en:plant-based-beverages', 'en:juices-and-nectars', 'en:fruit-juices'), 'juice'],
     ['Mango Smoothie', tags('en:plant-based-beverages', 'en:smoothies'), 'smoothie'],
     ['Lager', tags('en:alcoholic-beverages', 'en:beers'), 'beer'],
-    ['Hard Seltzer', tags('en:alcoholic-beverages', 'en:hard-seltzers'), 'beer'],
+    ['Hard Seltzer', tags('en:alcoholic-beverages', 'en:hard-seltzers'), 'hard_seltzer'],
+    ['Hard Seltzer', tags('en:alcoholic-beverages', 'en:beers', 'en:hard-seltzers'), 'hard_seltzer'],
+    ['Dry Cider', tags('en:alcoholic-beverages', 'en:ciders'), 'cider'],
     ['Pinot Noir', tags('en:alcoholic-beverages', 'en:wines'), 'wine'],
     ['Bourbon', tags('en:alcoholic-beverages', 'en:distilled-beverages', 'en:hard-liquors'), 'spirits_cocktails'],
     ['Oat Drink', tags('en:plant-based-beverages'), null],
@@ -94,15 +96,14 @@ describe('barcode product, for filling in a new Bev', () => {
   it('never files alcohol under a soft-drink category it is also tagged as', () => {
     expect(product({ product_name: 'Hard Iced Tea', categories_tags: tags('en:alcoholic-beverages', 'en:tea-based-beverages', 'en:iced-teas') }))
       .toMatchObject({ name: 'Hard Iced Tea', categoryId: null });
-    expect(product({ product_name: 'Dry Cider', categories_tags: tags('en:alcoholic-beverages', 'en:ciders') })).toMatchObject({ categoryId: null });
   });
   it('reads alcohol from the tag itself when the alcoholic-beverages ancestor is missing', () => {
     expect(product({ product_name: 'Hard Iced Tea', categories_tags: tags('en:hard-teas', 'en:iced-teas') })).toMatchObject({ categoryId: null });
     expect(product({ product_name: 'Spiked Energy', categories_tags: tags('en:alcoholic-energy-drinks', 'en:energy-drinks') }))
       .toMatchObject({ categoryId: null });
-    expect(product({ product_name: 'Dry Cider', categories_tags: tags('en:ciders', 'en:fruit-juices') })).toMatchObject({ categoryId: null });
     // Without the ancestor an alcoholic category still maps, and a soft drink's own "non-alcoholic" tag is not alcohol.
-    expect(product({ product_name: 'Hard Seltzer', categories_tags: tags('en:hard-seltzers') })).toMatchObject({ categoryId: 'beer' });
+    expect(product({ product_name: 'Hard Seltzer', categories_tags: tags('en:hard-seltzers') })).toMatchObject({ categoryId: 'hard_seltzer' });
+    expect(product({ product_name: 'Dry Cider', categories_tags: tags('en:ciders', 'en:fruit-juices') })).toMatchObject({ categoryId: 'cider' });
     expect(product({ product_name: 'Cola', categories_tags: tags('en:non-alcoholic-beverages', 'en:sodas') })).toMatchObject({ categoryId: 'soda' });
     expect(product({ product_name: 'Iced Tea', categories_tags: tags('en:alcohol-free-drinks', 'en:iced-teas') })).toMatchObject({ categoryId: 'tea' });
   });

@@ -6,7 +6,7 @@ export interface Bev {
   brand?: string;
   /** Omitted from lines when "Original". */
   flavor?: string;
-  /** Category slug: 'soda' | 'diet_soda' | 'juice' | 'water' | 'sparkling_water' | 'energy' | 'coffee' | 'tea' | 'boba' | 'sports' | 'smoothie' | 'beer' | 'wine' | 'spirits_cocktails' | 'other' */
+  /** Category slug: 'soda' | 'diet_soda' | 'juice' | 'water' | 'sparkling_water' | 'energy' | 'coffee' | 'tea' | 'boba' | 'sports' | 'smoothie' | 'beer' | 'wine' | 'spirits_cocktails' | 'hard_seltzer' | 'cider' | 'other' */
   category: CategoryId;
   priceTier: 1 | 2 | 3 | 4;
   priceEstimated?: boolean;
@@ -20,7 +20,7 @@ export interface Bev {
   /** How many people have ranked it (`BevSummary.ratingCount`). */
   ratingCount?: number;
 }
-export type CategoryId = 'soda' | 'diet_soda' | 'juice' | 'water' | 'sparkling_water' | 'energy' | 'coffee' | 'tea' | 'boba' | 'sports' | 'smoothie' | 'beer' | 'wine' | 'spirits_cocktails' | 'other';
+export type CategoryId = 'soda' | 'diet_soda' | 'juice' | 'water' | 'sparkling_water' | 'energy' | 'coffee' | 'tea' | 'boba' | 'sports' | 'smoothie' | 'beer' | 'wine' | 'spirits_cocktails' | 'hard_seltzer' | 'cider' | 'other';
 export type Bucket = 'loved' | 'fine' | 'disliked';
 export interface Person { name: string; handle?: string; src?: string }
 
