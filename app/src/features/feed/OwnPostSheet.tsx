@@ -19,36 +19,49 @@ export const DELETE_BODY = 'Its post, likes and comments go too.';
  * ranking (`FeedEventKind` is only 'RANKING'), so deleting it is `rankings.removeRanking`, which
  * takes the post and its likes and comments with it, and shifts the bucket's other Bevs up.
  * `onDeleted` runs once the sheet has finished closing after a delete (the Post screen goes back):
- * navigating under a Modal that is still dismissing leaves iOS with a stuck screen.
+ * navigating under a Modal that is still dismissing leaves iOS with a stuck screen. It still runs
+ * when the sheet was dismissed while the delete was in flight.
  */
 export function OwnPostSheet({ post, onClose, onDeleted }: { post: FeedItem | null; onClose: () => void; onDeleted?: () => void }) {
   const { colors } = useTheme();
   const [confirming, setConfirming] = useState(false);
   const remove = useRemoveRanking();
+  // A delete succeeded and `onDeleted` waits for the sheet to finish closing.
   const deleted = useRef(false);
+  // The sheet has finished closing (or never opened): a delete that lands now goes straight on.
+  const gone = useRef(true);
+  // The post the sheet last opened on, so it keeps its content while it slides closed.
+  const last = useRef<FeedItem | null>(null);
+  if (post) last.current = post;
+  const shown = post ?? last.current;
 
   const postId = post?.id;
   useEffect(() => {
-    // A new post resets the sheet (deliberately keyed on the post only).
+    // Opening on a post starts at the menu with no old error. Only on open, never on mount or close:
+    // a reset on close would drop the in-flight delete's onSuccess, and one on mount notifies the
+    // mutation's observer for nothing on every screen that hosts this sheet.
+    if (postId == null) return;
+    gone.current = false;
     setConfirming(false);
-    remove.reset();
+    if (!remove.isIdle) remove.reset();
   }, [postId]);
 
   return (
     <Sheet
       open={!!post}
-      title={confirming ? DELETE_TITLE : (post?.bev.name ?? '')}
+      title={confirming ? DELETE_TITLE : (shown?.bev.name ?? '')}
       snap={40}
       onClose={onClose}
       onClosed={() => {
+        gone.current = true;
         if (!deleted.current) return;
         deleted.current = false;
         onDeleted?.();
       }}
     >
-      {post && !confirming ? <SheetOption label={DELETE_POST} icon="x" destructive onPress={() => setConfirming(true)} /> : null}
+      {shown && !confirming ? <SheetOption label={DELETE_POST} icon="x" destructive onPress={() => setConfirming(true)} /> : null}
 
-      {post && confirming ? (
+      {shown && confirming ? (
         <View style={styles.pad}>
           <Text style={[type.bodyLarge, { color: colors.text }]}>{DELETE_BODY}</Text>
           <Announce text={remove.error ? actionErrorMessage(remove.error) : null} />
@@ -65,10 +78,14 @@ export function OwnPostSheet({ post, onClose, onDeleted }: { post: FeedItem | nu
               variant="primary"
               loading={remove.isPending}
               style={styles.grow}
-              accessibilityLabel={`Delete ${post.bev.name}`}
+              accessibilityLabel={`Delete ${shown.bev.name}`}
               onPress={() =>
-                remove.mutate(post.bev.id, {
+                remove.mutate(shown.bev.id, {
                   onSuccess: () => {
+                    if (gone.current) {
+                      onDeleted?.();
+                      return;
+                    }
                     deleted.current = true;
                     onClose();
                   },

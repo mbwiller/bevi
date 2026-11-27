@@ -174,6 +174,9 @@ export function Sheet({ open = false, title, snap = 40, expand = false, onClose,
   const closedRef = useRef(onClosed);
   closedRef.current = onClosed;
   const awaitingClose = useRef(false);
+  // A sheet that has never opened has nothing to close: no close animation, no timers.
+  const everOpened = useRef(open);
+  if (open) everOpened.current = true;
   const stillMounted = useRef(mounted);
   stillMounted.current = mounted;
   const fireClosed = () => {
@@ -186,6 +189,7 @@ export function Sheet({ open = false, title, snap = 40, expand = false, onClose,
       awaitingClose.current = true;
       return;
     }
+    if (!awaitingClose.current) return;
     if (Platform.OS !== 'ios') {
       fireClosed();
       return;
@@ -212,6 +216,7 @@ export function Sheet({ open = false, title, snap = 40, expand = false, onClose,
       y.value = reduced ? fold : withTiming(fold, { duration: motion.base, easing: EASE });
       return;
     }
+    if (!everOpened.current) return;
     const wasFlung = flung.current;
     flung.current = false;
     if (ignored.current) clearTimeout(ignored.current);
