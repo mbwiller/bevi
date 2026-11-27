@@ -276,14 +276,19 @@ export function createBevsApi(client: SupabaseClient, snapshots: SnapshotCache):
       p_photo_asset_id: input.photoAssetId ?? null,
       p_label_asset_id: input.labelAssetId ?? null,
     };
-    const rpcName = input.nutrition ? 'create_bev_with_nutrition' : 'create_bev';
+    // Until create_bev_with_nutrition_v2 (BEV-13) exists, only an Open Food
+    // Facts snapshot can be saved, and v1 refuses any key outside its ten, so
+    // `source` (contract 3.10.0) stays out of what it is sent.
+    const { source: _source, ...snapshot } = input.nutrition ?? {};
+    const saved = input.nutrition && input.nutrition.source !== 'label-ocr' ? snapshot : null;
+    const rpcName = saved ? 'create_bev_with_nutrition' : 'create_bev';
     let result = await client.rpc(rpcName, {
       ...args,
-      ...(input.nutrition ? { p_nutrition: input.nutrition } : {}),
+      ...(saved ? { p_nutrition: saved } : {}),
     }).single();
     // The migration is applied manually after the backend deploy. If it is not
     // there yet, preserve Bev creation and omit only the optional snapshot.
-    if (input.nutrition && result.error?.code === 'PGRST202') {
+    if (saved && result.error?.code === 'PGRST202') {
       result = await client.rpc('create_bev', args).single();
     }
     const { data, error } = result;

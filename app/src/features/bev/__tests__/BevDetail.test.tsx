@@ -212,7 +212,7 @@ it('shows persisted barcode nutrition on the Bev page', async () => {
   const nutrition = {
     barcode: '012345678901', productName: 'Scanned product', basis: 'Per serving (355 ml)',
     calories: 0, fatGrams: null, carbohydrateGrams: 0, sugarGrams: 0, proteinGrams: null,
-    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901',
+    sodiumMg: 4, sourceUrl: 'https://world.openfoodfacts.org/product/012345678901', source: 'openfoodfacts' as const,
   };
   const get = jest.spyOn(api.bevs, 'get').mockResolvedValue({ ...bev, nutrition });
   try {

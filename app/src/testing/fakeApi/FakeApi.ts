@@ -1935,12 +1935,14 @@ export class FakeApi implements BeviApi {
           if (input.priceTier !== null && ![1, 2, 3, 4].includes(input.priceTier)) invalid('priceTier', 'Choose a price');
           if (input.nutrition) {
             const n = input.nutrition;
-            const fields = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams', 'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg'];
+            // `source` (contract 3.10.0) is accepted, and only as the one kind there is until BEV-13.
+            const fields = ['barcode', 'productName', 'basis', 'sourceUrl', 'calories', 'fatGrams', 'carbohydrateGrams', 'sugarGrams', 'proteinGrams', 'sodiumMg', 'source'];
             const values = [n.calories, n.fatGrams, n.carbohydrateGrams, n.sugarGrams, n.proteinGrams, n.sodiumMg];
             const strings = [n.barcode, n.productName, n.basis, n.sourceUrl];
             if (Object.keys(n).some((k) => !fields.includes(k)) ||
                 strings.some((v) => typeof v !== 'string' || !v.trim() || v.length > 256) ||
-                !/^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode) ||
+                (n.source !== undefined && n.source !== 'openfoodfacts') ||
+                !/^(?:\d{8}|\d{12}|\d{13})$/.test(n.barcode ?? '') ||
                 n.sourceUrl !== `https://world.openfoodfacts.org/product/${n.barcode}` ||
                 !values.some((v) => v !== null) ||
                 values.some((v) => v !== null && (typeof v !== 'number' || !Number.isFinite(v) || v < 0 || v > 1_000_000))) {
