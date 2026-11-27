@@ -154,6 +154,7 @@ export const COMPONENT_FILES: Readonly<Record<string, string>> = {
   OptionRow: 'app/src/features/safety/SafetyFlow.tsx',
   OutboxRow: 'app/src/features/bug-report/ReportsSheet.tsx',
   Outline: 'app/src/features/bug-report/Highlight.tsx',
+  OwnPostSheet: 'app/src/features/feed/OwnPostSheet.tsx',
   PeopleList: 'app/src/features/people/PeopleList.tsx',
   PeopleScreen: 'app/src/features/people/PeopleScreen.tsx',
   PeopleSkeleton: 'app/src/features/people/PeopleList.tsx',

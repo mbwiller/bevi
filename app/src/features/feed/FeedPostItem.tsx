@@ -23,7 +23,7 @@ export interface FeedPostItemProps {
   onOpenBev: () => void;
   /** Omitted on the actor's own profile, where the avatar has nowhere to go. */
   onOpenActor?: () => void;
-  /** Opens the post's More menu (Report post, Block account). Omitted on the viewer's own post. */
+  /** Opens the post's More menu: Report post and Block account, or Delete post on the viewer's own post. */
   onMore?: () => void;
   /** Opens where the Bev was had (the Map tab). The place line shows without it, as text. */
   onOpenPlace?: () => void;
@@ -74,8 +74,8 @@ export const FeedPostItem = memo(function FeedPostItem({
         onRank={onRank}
         onSave={onSave}
         onOpen={onOpenBev}
-        onMore={you ? undefined : onMore}
-        moreLabel={`More actions, post by @${item.actor.handle}`}
+        onMore={onMore}
+        moreLabel={you ? 'More actions, your post' : `More actions, post by @${item.actor.handle}`}
         avatarPressStyle={onOpenActor ? actorPress.style : undefined}
         divider={false}
       />

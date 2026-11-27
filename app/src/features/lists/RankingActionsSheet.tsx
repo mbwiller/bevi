@@ -13,18 +13,19 @@ import { PlacePickerBody } from '@/features/places/PlacePicker';
 import { actionErrorMessage } from '@/lib/errorCopy';
 import { spacing, type, useTheme } from '@/theme';
 
-import { BUCKET_SHORT } from './copy';
 import { SheetOption } from './SheetOption';
 
 /** `rankings.updateNote` accepts up to 140 characters (contract `SubmitRankingInput.note`). */
 export const NOTE_MAX = 140;
+/** The Remove confirm: removing a ranking deletes its post, with that post's likes and comments. */
+export const REMOVE_BODY = "It leaves your Bev'd list, with its post, likes and comments.";
 
 type Mode = 'menu' | 'note' | 'place' | 'remove';
 
 /**
  * A Bev'd row's actions (§6.5, §6.19): Bev it again (opens the ranking flow in re-rank mode), Edit note
  * (140 characters), Add or Change location (the place picker, in this sheet at its tall snap; BEV-22)
- * and Remove (with a confirm that explains the bucket's other scores shift).
+ * and Remove (with a short confirm that says the Bev's post, likes and comments go too).
  */
 export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | null; onClose: () => void }) {
   const { colors } = useTheme();
@@ -129,7 +130,7 @@ export function RankingActionsSheet({ ranked, onClose }: { ranked: RankedBev | n
       {ranked && mode === 'remove' ? (
         <View style={styles.pad}>
           <Text style={[type.bodyLarge, { color: colors.text }]}>
-            {`It leaves your Bev'd list, and the other Bevs in ${BUCKET_SHORT[ranked.bucket]} shift to fill the gap.`}
+            {REMOVE_BODY}
           </Text>
           <Announce text={remove.error ? actionErrorMessage(remove.error) : null} />
           {remove.error ? (

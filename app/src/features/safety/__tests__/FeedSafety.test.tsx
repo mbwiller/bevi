@@ -69,7 +69,7 @@ const moreOn = (post: { actor: { handle: string } }) => `More actions, post by @
 const topSheet = () => within(screen.getAllByTestId('sheet').at(-1)!);
 
 describe('Your feed', () => {
-  it("has More on someone else's post, never on your own", async () => {
+  it("has More on someone else's post, and Delete post (never report or block) on your own", async () => {
     const post = await othersPost();
     await start();
     const card = await screen.findByTestId(`feed-post-${post.id}`);
@@ -80,8 +80,23 @@ describe('Your feed', () => {
     const own = (await api.feed.getFeed({ limit: 20 })).items.find((p) => p.actor.id === me.id)!;
     const ownCard = await screen.findByTestId(`feed-post-${own.id}`);
     expect(within(ownCard).getByText('You')).toBeTruthy();
-    expect(within(ownCard).queryByRole('button', { name: /^More actions/ })).toBeNull();
-    expect(more).toBeTruthy();
+    expect(within(ownCard).queryByRole('button', { name: /^More actions, post by/ })).toBeNull();
+    await fireEvent.press(within(ownCard).getByRole('button', { name: 'More actions, your post' }));
+    expect(await topSheet().findByRole('button', { name: 'Delete post' })).toBeTruthy();
+    expect(topSheet().queryByRole('button', { name: 'Report post' })).toBeNull();
+    expect(topSheet().queryByRole('button', { name: /^Block/ })).toBeNull();
+  });
+
+  it('deleting your own post takes it out of the feed (TICKET-32)', async () => {
+    const me = await api.profile.getMe();
+    const own = (await api.feed.getFeed({ limit: 20 })).items.find((p) => p.actor.id === me.id)!;
+    await start();
+    const ownCard = await screen.findByTestId(`feed-post-${own.id}`);
+    await fireEvent.press(within(ownCard).getByRole('button', { name: 'More actions, your post' }));
+    await fireEvent.press(await topSheet().findByRole('button', { name: 'Delete post' }));
+    await fireEvent.press(topSheet().getByRole('button', { name: `Delete ${own.bev.name}` }));
+    await waitFor(() => expect(screen.queryByTestId(`feed-post-${own.id}`)).toBeNull());
+    expect((await api.rankings.listMine()).items.some((r) => r.bevId === own.bev.id)).toBe(false);
   });
 
   it('Report post files the report for that post and hides nothing', async () => {

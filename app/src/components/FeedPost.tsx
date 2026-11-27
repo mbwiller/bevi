@@ -93,8 +93,8 @@ export interface FeedPostProps {
   onSave?: () => void;
   onOpen?: () => void;
   /**
-   * Opens the post's More menu (Report post, Block account): an ellipsis after the score bubble.
-   * Omitted on the viewer's own post, which has nothing to report.
+   * Opens the post's More menu (Report post and Block account, or Delete post on the viewer's
+   * own post): an ellipsis after the score bubble.
    */
   onMore?: () => void;
   /** The More button's accessible name; say whose post it is ("More actions, post by @friend_a"). */
