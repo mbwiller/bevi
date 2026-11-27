@@ -71,7 +71,7 @@ export function OwnPostSheet({ post, onClose, onDeleted }: { post: FeedItem | nu
             </Text>
           ) : null}
           <View style={styles.buttons}>
-            <Button variant="outlined" onPress={() => setConfirming(false)} style={styles.grow}>
+            <Button variant="outlined" size="lg" onPress={() => setConfirming(false)} style={styles.grow}>
               Cancel
             </Button>
             <Button
